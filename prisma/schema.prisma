@@ -1,0 +1,98 @@
+// Do NOT run `prisma db push` against the production Neon database — it can silently
+// drop columns/tables containing real data. Use `npm run db:migrate` for schema
+// changes, and run `npm run db:backup` first regardless.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  reviews       Review[]
+  baseProductName String?
+  id            String  @id @default(uuid())
+  name          String
+  description   String
+  price         Float
+  originalPrice Float
+  discount      Float
+  weight        String
+  images        String[] @default([])
+  ingredients   String?
+  nutrition     String?
+  stock         Int     @default(0)
+  status        String  @default("active") // active or inactive
+}
+
+model Order {
+  id                String             @id @default(uuid()) // internal id
+  orderId           String             @unique // TIKHI-00001
+  orderDate         String
+  customer          Json
+  pricing           Json
+  payment           Json
+  status            String
+  tracking          Json?
+  estimatedDelivery String
+  receiptUrl        String
+  items             OrderItem[]
+  statusHistory     OrderStatusEvent[]
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  productId String
+  name      String
+  quantity  Int
+  price     Float
+  mrp       Float
+  image     String
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id])
+}
+
+model OrderStatusEvent {
+  id        String @id @default(uuid())
+  status    String
+  timestamp String
+  note      String
+  orderId   String
+  order     Order  @relation(fields: [orderId], references: [id])
+}
+
+model User {
+  reviews      Review[]
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         String   @default("customer") // admin | customer
+  createdAt    DateTime @default(now())
+}
+
+model Coupon {
+  id            String    @id @default(uuid())
+  code          String    @unique
+  type          String    // percentage or flat
+  value         Float
+  active        Boolean   @default(true)
+  expiresAt     DateTime?
+  minOrderValue Float?
+  usageLimit    Int?
+  usedCount     Int       @default(0)
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  rating      Int
+  comment     String
+  createdAt   DateTime @default(now())
+}
