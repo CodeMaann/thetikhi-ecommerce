@@ -310,21 +310,28 @@ export function Home() {
             <p className="text-text-muted max-w-2xl mx-auto">Our Aloo Ka Achar is incredibly versatile. Here are our favorite ways to spice up every meal.</p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {[
-              { img: "recipe-1.png", title: "With Paratha", desc: "The classic combination. A generous dollop on a hot paratha." },
-              { img: "recipe-2.png", title: "Dal Chawal", desc: "Elevate your simple comfort food with a tangy kick." },
-              { img: "recipe-3.png", title: "Poha", desc: "A tangy twist to your morning breakfast." },
-              { img: "recipe-4.png", title: "Straight from Jar", desc: "We won't judge! It's that good. Grab a spoon." },
-            ].map((recipe, i) => (
-              <div key={i} className="group relative rounded-2xl overflow-hidden bg-bg-elevated border border-border">
-                <div className="h-48 overflow-hidden">
-                 <img
-    src={"recipe-${i + 1}.png"}
-    alt={recipe.title}
-    className="w-full h-full object-cover"
-/>
-                </div>
+         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+  {[
+    { img: "/recipe-1.png", title: "With Paratha", desc: "The classic combination. A generous dollop on a hot paratha." },
+    { img: "/recipe-2.png", title: "Dal Chawal", desc: "Elevate your simple comfort food with a tangy kick." },
+    { img: "/recipe-3.png", title: "Poha", desc: "A tangy twist to your morning breakfast." },
+    { img: "/recipe-4.png", title: "Straight from Jar", desc: "We won't judge! It's that good. Grab a spoon." },
+  ].map((recipe, i) => (
+    <div key={i} className="group relative rounded-2xl overflow-hidden bg-bg-elevated border border-border">
+      <div className="h-48 overflow-hidden">
+        <img
+          src={recipe.img}
+          alt={recipe.title}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <div className="p-6">
+        <h3 className="font-bold text-lg text-text-primary mb-2">{recipe.title}</h3>
+        <p className="text-sm text-text-muted">{recipe.desc}</p>
+      </div>
+    </div>
+  ))}
+</div>
                 <div className="p-6">
                   <h3 className="font-bold text-lg text-text-primary mb-2">{recipe.title}</h3>
                   <p className="text-sm text-text-muted">{recipe.desc}</p>
