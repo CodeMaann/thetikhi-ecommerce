@@ -12,7 +12,7 @@ export function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
              <img
-  src="public/logoo.png"
+  src="logoo.png"
   alt="The Tikhi Logo"
   className="h-20 w-auto"
 />
