@@ -110,7 +110,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="deal page buy 2 get 3.png"
+  src="/deal page buy 2 get 3.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -127,7 +127,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
               <img
-  src="deal card 2.png"
+  src="/deal card 2.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -144,7 +144,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="deal card 3.png"
+  src="/deal card 3.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -208,7 +208,7 @@ export function Home() {
           <div className="relative rounded-2xl border border-dashed border-brand-primary overflow-hidden">
             <div className="absolute inset-0 bg-black/70 z-10" />
            <img
-  src="deal page buy 2 get 3.png"
+  src="/deal page buy 2 get 3.png"
   alt="Combo Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -267,7 +267,7 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid md:grid-cols-2 gap-16 items-center">
           <div className="flex flex-col items-center justify-center">
   <img
-    src="achar image sample.jpeg"
+    src="/achar image sample.jpeg"
     alt="Our Story"
     className="max-w-[300px] md:max-w-[400px] w-full h-auto object-contain rounded-2xl"
   />
@@ -320,7 +320,7 @@ export function Home() {
               <div key={i} className="group relative rounded-2xl overflow-hidden bg-bg-elevated border border-border">
                 <div className="h-48 overflow-hidden">
                  <img
-    src={`public/recipe-${i + 1}.png`}
+    src={"/recipe-${i + 1}.png"}
     alt={recipe.title}
     className="w-full h-full object-cover"
 />
