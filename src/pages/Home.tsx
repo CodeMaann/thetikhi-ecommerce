@@ -110,7 +110,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="deal page buy 2 get 3.png"
+  src="public/deal page buy 2 get 3.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -127,7 +127,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
               <img
-  src="deal card 2.png"
+  src="public/deal card 2.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -144,7 +144,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="deal card 3.png"
+  src="public/deal card 3.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -208,7 +208,7 @@ export function Home() {
           <div className="relative rounded-2xl border border-dashed border-brand-primary overflow-hidden">
             <div className="absolute inset-0 bg-black/70 z-10" />
            <img
-  src="deal page buy 2 get 3.png"
+  src="public/deal page buy 2 get 3.png"
   alt="Combo Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -267,7 +267,7 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid md:grid-cols-2 gap-16 items-center">
           <div className="flex flex-col items-center justify-center">
   <img
-    src="achar image sample.jpeg"
+    src="public/achar image sample.jpeg"
     alt="Our Story"
     className="max-w-[300px] md:max-w-[400px] w-full h-auto object-contain rounded-2xl"
   />
@@ -312,15 +312,15 @@ export function Home() {
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             {[
-              { img: "", title: "With Paratha", desc: "The classic combination. A generous dollop on a hot paratha." },
-              { img: "", title: "Dal Chawal", desc: "Elevate your simple comfort food with a tangy kick." },
-              { img: "", title: "Poha", desc: "A tangy twist to your morning breakfast." },
-              { img: "", title: "Straight from Jar", desc: "We won't judge! It's that good. Grab a spoon." },
+              { img: "public/recipe-1.png", title: "With Paratha", desc: "The classic combination. A generous dollop on a hot paratha." },
+              { img: "public/recipe-2.png", title: "Dal Chawal", desc: "Elevate your simple comfort food with a tangy kick." },
+              { img: "public/recipe-3.png", title: "Poha", desc: "A tangy twist to your morning breakfast." },
+              { img: "public/recipe-4.png", title: "Straight from Jar", desc: "We won't judge! It's that good. Grab a spoon." },
             ].map((recipe, i) => (
               <div key={i} className="group relative rounded-2xl overflow-hidden bg-bg-elevated border border-border">
                 <div className="h-48 overflow-hidden">
                  <img
-    src={"recipe-${i + 1}.png"}
+    src={"public/recipe-${i + 1}.png"}
     alt={recipe.title}
     className="w-full h-full object-cover"
 />
@@ -336,7 +336,7 @@ export function Home() {
           <div className="flex justify-center gap-6 flex-wrap">
 
   <video
-    src="/videos/reel1.mp4"
+    src="public/reel1.mp4"
     controls
     autoPlay
     muted
@@ -346,7 +346,7 @@ export function Home() {
   />
 
   <video
-    src="/videos/reel2.mp4"
+    src="public/reel2.mp4"
     controls
     autoPlay
     muted
@@ -356,7 +356,7 @@ export function Home() {
   />
 
   <video
-    src="/videos/reel3.mp4"
+    src="public/reel3.mp4"
     controls
     autoPlay
     muted
