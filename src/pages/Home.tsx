@@ -208,7 +208,7 @@ export function Home() {
           <div className="relative rounded-2xl border border-dashed border-brand-primary overflow-hidden">
             <div className="absolute inset-0 bg-black/70 z-10" />
            <img
-  src="/deal page buy 2 get 3.png"
+  src="deal page buy 2 get 3.png"
   alt="Combo Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
