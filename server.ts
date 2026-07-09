@@ -574,6 +574,7 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
     app.use(vite.middlewares);
   } else {
     app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
+    app.use(express.static(path.join(process.cwd(), 'public'))); // <-- ADD THIS NEW LINE HERE
     app.use(express.static(path.join(process.cwd(), 'dist')));
     app.get('*', (req, res) => {
       res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
