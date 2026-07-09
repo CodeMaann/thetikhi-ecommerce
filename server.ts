@@ -30,30 +30,20 @@ if (!ADMIN_USER || !ADMIN_PASS) {
 async function startServer() {
   const app = express();
   const PORT = 3000;
-
-  function processImages(images: string[]): string[] {
-    if (!images || !Array.isArray(images)) return [];
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
   
-    return images.map(img => {
-      if (typeof img === 'string' && img.startsWith('data:image/')) {
-        const matches = img.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          const ext = matches[1];
-          const base64Data = matches[2];
-          const filename = `img-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
-          const filepath = path.join(uploadDir, filename);
-          fs.writeFileSync(filepath, base64Data, 'base64');
-          return `/uploads/${filename}`;
-        }
-      }
-      return img;
+function processImages(images: string[]): string[] {
+    if (!images || !Array.isArray(images)) return [];
+    return images.filter(img => {
+      if (typeof img !== 'string') return false;
+      if (!img.startsWith('data:image/')) return true; // already a URL, keep as-is
+      // basic sanity check + ~2MB size cap so we don't bloat the database
+      const matches = img.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+      if (!matches) return false;
+      const approxBytes = matches[2].length * 0.75;
+      return approxBytes < 2 * 1024 * 1024;
     });
   }
-
+ 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   
