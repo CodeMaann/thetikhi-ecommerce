@@ -110,7 +110,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="/deal page buy 2 get 3.png"
+  src="deal page buy 2 get 3.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -127,7 +127,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
               <img
-  src="/deal card 2.png"
+  src="deal card 2.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -144,7 +144,7 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="/deal card 3.png"
+  src="deal card 3.png"
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
