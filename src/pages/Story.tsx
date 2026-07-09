@@ -10,8 +10,12 @@ export function Story() {
         </h1>
         
         <div className="w-full h-64 md:h-96 bg-bg-surface rounded-3xl border border-border flex items-center justify-center overflow-hidden">
-           <div className="text-6xl">🌶️👵🏽✨</div>
-        </div>
+  <img 
+    src="our story.png" 
+    alt="The Tikhi Founder" 
+    className="w-full h-full object-cover" 
+  />
+</div>
 
         <div className="space-y-6 text-text-muted text-lg leading-relaxed text-left max-w-2xl mx-auto">
           <p>
