@@ -336,7 +336,7 @@ export function Home() {
           <div className="flex justify-center gap-6 flex-wrap">
 
   <video
-    src="videos/reel1.mp4"
+    src="/videos/reel1.mp4"
     controls
     autoPlay
     muted
@@ -346,7 +346,7 @@ export function Home() {
   />
 
   <video
-    src="videos/reel2.mp4"
+    src="/videos/reel2.mp4"
     controls
     autoPlay
     muted
@@ -356,7 +356,7 @@ export function Home() {
   />
 
   <video
-    src="videos/reel3.mp4"
+    src="/videos/reel3.mp4"
     controls
     autoPlay
     muted
