@@ -101,7 +101,7 @@ export function Navbar() {
            <div className="flex-shrink-0 flex items-center">
   <Link to="/" className="flex items-center">
     <img
-      src="public/logoo.png"
+      src="logoo.png"
       alt="The Tikhi"
       className="h-16 w-auto object-contain"
     />
