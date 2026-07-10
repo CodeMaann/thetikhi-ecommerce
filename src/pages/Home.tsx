@@ -170,8 +170,8 @@ export function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {products.slice(0, 2).map((product, i) => (
-              <div key={product.id} className="bg-bg-elevated border border-border hover:border-brand-primary rounded-2xl p-6 transition-colors flex flex-col">
-                <div className="relative h-64 mb-6 rounded-xl bg-bg-surface border border-border overflow-hidden group hover:border-brand-accent/50 transition-colors">
+              <Link key={product.id} to={`/product/${product.id}`} className="block group bg-bg-elevated border border-border hover:border-brand-primary hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-accent/5 rounded-2xl p-6 transition-all duration-300 flex flex-col">
+                <div className="relative h-64 mb-6 rounded-xl bg-bg-surface border border-border overflow-hidden group-hover:border-brand-accent/50 transition-colors">
                   <div className="absolute top-2 right-2 bg-brand-primary text-white text-xs font-bold px-3 py-1 rounded-full z-20">
                     {product.discount}% OFF
                   </div>
@@ -193,10 +193,10 @@ export function Home() {
                   </span>
                 </div>
                 
-                <Link to={`/product/${product.id}`} className="w-full text-center bg-gradient-to-r from-brand-primary to-brand-accent text-white py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                <div className="w-full text-center bg-gradient-to-r from-brand-primary to-brand-accent text-white py-3 rounded-xl font-bold group-hover:opacity-90 transition-opacity">
                   View & Add to Cart
-                </Link>
-              </div>
+                </div>
+              </Link>
             ))}
           </div>
         </div>

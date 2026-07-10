@@ -2,10 +2,10 @@ import React from 'react';
 
 export function Recipes() {
   const waysToEnjoy = [
-    { title: 'With Paratha', desc: 'The classic combination. A dollop of The Tikhi Aloo Achar on a hot, ghee-roasted paratha.', emoji: '🫓' },
-    { title: 'Dal Chawal', desc: 'Elevate your simple comfort food. Mix it with steaming rice and yellow dal.', emoji: '🍛' },
-    { title: 'Poha', desc: 'A tangy twist to your morning breakfast. Just a spoonful does the magic.', emoji: '🥣' },
-    { title: 'Straight from Jar', desc: 'We won\'t judge! It\'s that good.', emoji: '🥄' },
+    { title: 'With Paratha', desc: 'The classic combination. A dollop of The Tikhi Aloo Achar on a hot, ghee-roasted paratha.', img: '/recipe-1.png' },
+    { title: 'Dal Chawal', desc: 'Elevate your simple comfort food. Mix it with steaming rice and yellow dal.', img: '/recipe-2.png' },
+    { title: 'Poha', desc: 'A tangy twist to your morning breakfast. Just a spoonful does the magic.', img: '/recipe-3.png' },
+    { title: 'Straight from Jar', desc: 'We won\'t judge! It\'s that good.', img: '/recipe-4.png' },
   ];
 
   return (
@@ -20,11 +20,15 @@ export function Recipes() {
 
         <div className="grid md:grid-cols-2 gap-8">
           {waysToEnjoy.map((way, i) => (
-            <div key={i} className="bg-bg-surface p-8 rounded-3xl border border-border flex gap-6 hover:border-brand-accent/30 transition-colors">
-              <div className="text-5xl bg-bg-hover w-20 h-20 rounded-2xl flex items-center justify-center shrink-0">
-                {way.emoji}
+            <div key={i} className="group relative rounded-2xl overflow-hidden bg-bg-elevated border border-border">
+              <div className="h-48 overflow-hidden">
+                <img
+                  src={way.img}
+                  alt={way.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div>
+              <div className="p-6">
                 <h3 className="text-xl font-bold text-text-primary mb-2">{way.title}</h3>
                 <p className="text-text-muted text-sm leading-relaxed">{way.desc}</p>
               </div>

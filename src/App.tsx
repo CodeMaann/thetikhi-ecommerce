@@ -22,6 +22,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ThemeProvider } from './lib/useTheme';
 import { safeFetch } from './lib/api';
 
+import { ScrollToTop } from './components/ScrollToTop';
+
 function AnimatedRoutes() {
   const location = useLocation();
   
@@ -85,6 +87,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <Router>
+        <ScrollToTop />
         <Toaster position="top-center" />
         <CookieConsent />
         <div className="flex flex-col min-h-screen bg-bg-base text-white text-text-primary font-sans selection:bg-brand-primary selection:text-white transition-colors duration-300">

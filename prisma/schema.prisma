@@ -64,9 +64,22 @@ model OrderStatusEvent {
   order     Order  @relation(fields: [orderId], references: [id])
 }
 
+model PasswordResetCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 model User {
-  reviews      Review[]
-  id           String   @id @default(uuid())
+  reviews            Review[]
+  passwordResetCodes PasswordResetCode[]
+  id                 String   @id @default(uuid())
   email        String   @unique
   name         String?
   passwordHash String

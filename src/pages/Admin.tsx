@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Truck, CheckCircle2, Search, Eye, Filter, ArrowRightLeft, Edit, Trash2, Plus, Image as ImageIcon, ArrowUp, ArrowDown } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Search, Eye, Filter, ArrowRightLeft, Edit, Trash2, Plus, Image as ImageIcon, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { ImageCropper } from '../components/ImageCropper';
 import { Order } from '../lib/orderService';
 import { Product, Coupon } from '../types';
@@ -195,8 +195,18 @@ export function Admin() {
       }
       
       toast.success(isEdit ? 'Product updated' : 'Product created');
-      setShowProductModal(false);
-      loadProducts();
+      await loadProducts();
+
+      if (isEdit) {
+        const updatedRes = await fetch(`/api/products/${editingProduct.id}`);
+        if (updatedRes.ok) {
+          const updatedProduct = await updatedRes.json();
+          setEditingProduct(updatedProduct);
+          setProductForm(updatedProduct);
+        }
+      } else {
+        setShowProductModal(false);
+      }
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -712,50 +722,69 @@ export function Admin() {
                 </div>
                 
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-text-muted mb-1">Image URL or File</label>
-                  <div className="flex items-center gap-4">
-                    
-                    <div className="flex-1 space-y-4 w-full">
-                      {/* Image list */}
-                      {(productForm.images || []).length > 0 ? (
-                        <div className="grid grid-cols-4 gap-4">
-                          {(productForm.images || []).map((img, i) => (
-                            <div key={i} className="relative group rounded-lg overflow-hidden border border-border aspect-square bg-bg-base">
-                              <img src={img || undefined} alt={`Preview ${i}`} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                                <div className="flex gap-2">
-                                  <button type="button" onClick={() => handleMoveImage(i, 'up')} disabled={i === 0} className="p-1 text-white disabled:opacity-30 hover:bg-white/20 rounded">
-                                    <ArrowUp className="w-4 h-4" />
-                                  </button>
-                                  <button type="button" onClick={() => handleMoveImage(i, 'down')} disabled={i === (productForm.images?.length || 0) - 1} className="p-1 text-white disabled:opacity-30 hover:bg-white/20 rounded">
-                                    <ArrowDown className="w-4 h-4" />
-                                  </button>
-                                  <button type="button" onClick={() => handleRemoveImage(i)} className="p-1 text-red-500 hover:bg-red-500/20 rounded">
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-text-muted">No images yet. Add at least one image.</div>
-                      )}
-                      
-                      <div className="flex items-center gap-4 mt-2">
-                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-bg-elevated file:text-text-primary hover:file:bg-[#3f3f46] transition-colors" />
-                      </div>
-                      
-                      {cropImageSrc && (
-                        <ImageCropper
-                          imageSrc={cropImageSrc}
-                          onCropComplete={handleCropComplete}
-                          onCancel={() => setCropImageSrc(null)}
-                        />
-                      )}
-                    </div>
+                  <div className="flex justify-between items-end mb-2">
+                    <label className="block text-sm font-medium text-text-primary">
+                      Product Photos (recommended: at least 4, first photo is the main image shown in listings)
+                    </label>
                   </div>
+                  
+                  <div className="w-full space-y-4">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      ref={fileInputRef} 
+                      onChange={handleImageUpload} 
+                      className="hidden" 
+                    />
 
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      {(productForm.images || []).map((img, i) => (
+                        <div key={i} className="relative group rounded-xl overflow-hidden border border-border aspect-square bg-bg-surface">
+                          <img src={img || undefined} alt={`Preview ${i}`} className="w-full h-full object-cover" />
+                          
+                          {i === 0 && (
+                            <div className="absolute top-2 left-2 bg-brand-primary text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded shadow-sm z-10">
+                              Main
+                            </div>
+                          )}
+
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => handleMoveImage(i, 'up')} disabled={i === 0} className="p-1.5 text-white disabled:opacity-30 hover:bg-white/20 rounded-md transition-colors bg-black/40">
+                                <ArrowLeft className="w-4 h-4" />
+                              </button>
+                              <button type="button" onClick={() => handleMoveImage(i, 'down')} disabled={i === (productForm.images?.length || 0) - 1} className="p-1.5 text-white disabled:opacity-30 hover:bg-white/20 rounded-md transition-colors bg-black/40">
+                                <ArrowRight className="w-4 h-4" />
+                              </button>
+                              <button type="button" onClick={() => handleRemoveImage(i)} className="p-1.5 text-red-400 hover:bg-red-500 hover:text-white rounded-md transition-colors bg-black/40">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {Array.from({ length: Math.max(4 - (productForm.images || []).length, 1) }).map((_, i) => (
+                        <button
+                          key={`empty-${i}`}
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="relative rounded-xl border-2 border-dashed border-border hover:border-brand-primary/50 aspect-square bg-bg-surface hover:bg-bg-elevated transition-colors flex flex-col items-center justify-center gap-2 text-text-muted hover:text-text-primary group"
+                        >
+                          <Plus className="w-8 h-8 text-text-muted group-hover:text-brand-primary transition-colors" />
+                          <span className="text-sm font-medium">Add Photo</span>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    {cropImageSrc && (
+                      <ImageCropper
+                        imageSrc={cropImageSrc}
+                        onCropComplete={handleCropComplete}
+                        onCancel={() => setCropImageSrc(null)}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">

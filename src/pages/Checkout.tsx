@@ -226,38 +226,147 @@ export function Checkout() {
     }
 
     if (paymentMethod === 'razorpay') {
-      // Mock Razorpay Flow
-      const options: any = {
-        key: 'rzp_test_mock_key',
-        amount: grandTotal * 100,
-        currency: 'INR',
-        name: 'The Tikhi',
-        description: 'Aloo Ka Achar Order',
-        image: '/logo.png',
-        order_id: 'order_mock_' + Math.floor(Math.random() * 1000000), // Mock backend order_id
-        handler: (res: any) => {
-          placeOrderDirect('paid', res);
-        },
-        prefill: {
-          name: shipping.name,
-          email: shipping.email,
-          contact: shipping.phone,
-        },
-        theme: {
-          color: '#C41E3A',
-        },
-      };
+      try {
+        const createRes = await fetch('/api/payment/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: grandTotal })
+        });
+        const orderData = await createRes.json();
 
-      const rzp = new Razorpay(options);
-      
-      rzp.on('payment.failed', function (response: any) {
-        setError("Payment failed. Please try again or use COD.");
+        if (!createRes.ok || !orderData.orderId) {
+          setError(orderData.error || 'Failed to initialize payment.');
+          setLoading(false);
+          return;
+        }
+
+        const options: any = {
+          key: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          name: 'The Tikhi',
+          description: 'Aloo Ka Achar Order',
+          image: '/logo.png',
+          order_id: orderData.orderId,
+          handler: async (res: any) => {
+            // Verify payment
+            try {
+              const baseOrder = {
+                orderDate: new Date().toISOString(),
+                customer: {
+                  name: shipping.name,
+                  phone: shipping.phone,
+                  email: shipping.email,
+                  address: {
+                    fullAddress: shipping.fullAddress,
+                    city: shipping.city,
+                    state: shipping.state,
+                    pincode: shipping.pincode,
+                    landmark: shipping.landmark,
+                    type: shipping.type
+                  }
+                },
+                items: cart.map(i => ({
+                  productId: i.id,
+                  name: i.name,
+                  quantity: i.quantity,
+                  price: i.price,
+                  mrp: i.price * 1.5,
+                  image: i.image
+                })),
+                pricing: {
+                  subtotal,
+                  shipping: shippingFee,
+                  codCharges,
+                  discount: 0,
+                  grandTotal
+                },
+                payment: {
+                  method: 'razorpay',
+                  status: 'paid',
+                  razorpayOrderId: res.razorpay_order_id,
+                  razorpayPaymentId: res.razorpay_payment_id,
+                  paidAt: new Date().toISOString()
+                },
+                status: 'confirmed',
+                statusHistory: [{ status: 'confirmed', timestamp: new Date().toISOString(), note: 'Order placed successfully' }],
+                estimatedDelivery: format(addDays(new Date(), 4), 'yyyy-MM-dd')
+              };
+              
+              const payload = {
+                ...baseOrder,
+                couponCode: appliedCoupon?.code
+              };
+
+              const verifyRes = await fetch('/api/payment/razorpay/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  razorpay_order_id: res.razorpay_order_id,
+                  razorpay_payment_id: res.razorpay_payment_id,
+                  razorpay_signature: res.razorpay_signature,
+                  orderData: payload
+                })
+              });
+              
+              const verifyData = await verifyRes.json();
+              if (verifyData.success) {
+                const finalOrder = verifyData.order;
+                clearCart();
+                
+                trackEvent('order_placed', { orderId: finalOrder.orderId, total: finalOrder.pricing.grandTotal, discount: finalOrder.pricing.discount, couponCode: finalOrder.pricing.offerApplied });
+                
+                setSuccessOrder(finalOrder);
+
+                // Fire confetti
+                const duration = 3 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+                const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+                const interval: any = setInterval(function() {
+                  const timeLeft = animationEnd - Date.now();
+
+                  if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                  }
+
+                  const particleCount = 50 * (timeLeft / duration);
+                  confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                  confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+                }, 250);
+              } else {
+                setError(verifyData.error || 'Payment verification failed.');
+              }
+            } catch (err) {
+              console.error('Verification error:', err);
+              setError('Payment verification failed.');
+            }
+          },
+          prefill: {
+            name: shipping.name,
+            email: shipping.email,
+            contact: shipping.phone,
+          },
+          theme: {
+            color: '#C41E3A',
+          },
+        };
+
+        const rzp = new Razorpay(options);
+        
+        rzp.on('payment.failed', function (response: any) {
+          setError(response.error?.description || "Payment failed. Please try again.");
+        });
+        
+        rzp.open();
         setLoading(false);
-      });
-      
-      rzp.open();
-      // Reset loading since the modal takes over
-      setLoading(false);
+      } catch (err) {
+        console.error('Failed to initialize Razorpay:', err);
+        setError('Failed to initialize payment gateway.');
+        setLoading(false);
+      }
     }
   };
 
@@ -283,6 +392,9 @@ export function Checkout() {
             <div className="text-center mb-6">
               <h2 className="text-[28px] font-bold text-text-primary mb-2 leading-tight">Order Placed Successfully!</h2>
               <p className="text-text-muted text-lg">Thank you, {successOrder.customer.name}!</p>
+              {successOrder.customer.email && (
+                <p className="text-sm text-text-muted mt-2">A confirmation email has been sent to {successOrder.customer.email}.</p>
+              )}
             </div>
 
             <div className="bg-bg-base rounded-xl p-4 border border-border mb-6 text-center">
@@ -450,7 +562,7 @@ export function Checkout() {
                           <p className="text-sm text-text-muted">Pay ₹50 extra COD charges if order below ₹999</p>
                         </div>
                       </div>
-                      <span className="bg-gray-800 text-xs px-2 py-1 rounded text-text-secondary">No prepayment needed</span>
+                      <span className="bg-gray-800 text-xs px-2 py-1 rounded text-white">No prepayment needed</span>
                     </div>
                   </label>
 
@@ -462,9 +574,9 @@ export function Checkout() {
                           <p className="font-bold">RAZORPAY — Online Payment</p>
                           <p className="text-sm text-text-muted">Powered by Razorpay. 100% secure SSL encryption.</p>
                           <div className="flex gap-2 mt-2">
-                            <span className="text-[10px] bg-bg-base px-2 py-1 rounded border border-border">UPI</span>
-                            <span className="text-[10px] bg-bg-base px-2 py-1 rounded border border-border">Cards</span>
-                            <span className="text-[10px] bg-bg-base px-2 py-1 rounded border border-border">NetBanking</span>
+                            <span className="text-[10px] bg-bg-base px-2 py-1 rounded border border-border text-text-secondary">UPI</span>
+                            <span className="text-[10px] bg-bg-base px-2 py-1 rounded border border-border text-text-secondary">Cards</span>
+                            <span className="text-[10px] bg-bg-base px-2 py-1 rounded border border-border text-text-secondary">NetBanking</span>
                           </div>
                         </div>
                       </div>

@@ -17,4 +17,4 @@
 
 This project uses Neon Postgres via Prisma. Schema changes must go through `npm run db:migrate` (which runs `prisma migrate dev`), **never** `npm run db:push` once real data exists. The `db:push` command can silently drop columns or tables containing real data if it detects schema conflicts. 
 
-Always run the backup script (`npm run db:backup`) before making any schema-affecting changes
+Always run the backup script (`npm run db:backup`) before making any schema-affecting changes or requests to AI Studio in the future.

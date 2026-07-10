@@ -3,9 +3,13 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import { Resend } from 'resend';
 import { createServer as createViteServer } from 'vite';
 import prisma from './src/server/prisma';
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
+import { sendOrderReceiptEmail } from './src/server/email';
 
 declare global {
   namespace Express {
@@ -27,21 +31,75 @@ if (!ADMIN_USER || !ADMIN_PASS) {
   console.warn('WARNING: ADMIN_EMAIL and ADMIN_PASSWORD environment variables are not set.');
 }
 
+const razorpayInstance = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET 
+  ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET }) 
+  : null;
+
+async function createOrderInDatabase(newOrderData: any) {
+  if (!newOrderData.orderId) {
+    newOrderData.orderId = 'ORD-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+  }
+  
+  newOrderData.receiptUrl = `/receipt/${newOrderData.orderId}`;
+
+  const savedOrder = await prisma.order.create({
+    data: {
+      orderId: newOrderData.orderId,
+      orderDate: newOrderData.orderDate || new Date().toISOString(),
+      customer: newOrderData.customer || {},
+      pricing: newOrderData.pricing || {},
+      payment: newOrderData.payment || {},
+      status: newOrderData.status || 'Received',
+      estimatedDelivery: newOrderData.estimatedDelivery || '',
+      receiptUrl: newOrderData.receiptUrl,
+      items: {
+        create: newOrderData.items.map((item: any) => ({
+          productId: item.productId,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          mrp: item.mrp || item.price,
+          image: item.image || ''
+        }))
+      },
+      statusHistory: {
+        create: [{
+          status: newOrderData.status || 'Received',
+          timestamp: new Date().toISOString(),
+          note: 'Order placed successfully'
+        }]
+      }
+    },
+    include: {
+      items: true,
+      statusHistory: true
+    }
+  });
+
+  if (savedOrder.customer && (savedOrder.customer as any).email) {
+    await sendOrderReceiptEmail((savedOrder.customer as any).email, savedOrder);
+  }
+
+  return savedOrder;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
   
 function processImages(images: string[]): string[] {
     if (!images || !Array.isArray(images)) return [];
-    return images.filter(img => {
-      if (typeof img !== 'string') return false;
-      if (!img.startsWith('data:image/')) return true; // already a URL, keep as-is
-      // basic sanity check + ~2MB size cap so we don't bloat the database
+    return images.map(img => {
+      if (typeof img !== 'string') return '';
+      if (!img.startsWith('data:image/')) return img; // already a URL, keep as-is
       const matches = img.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-      if (!matches) return false;
+      if (!matches) throw new Error('Invalid base64 image data format.');
       const approxBytes = matches[2].length * 0.75;
-      return approxBytes < 2 * 1024 * 1024;
-    });
+      if (approxBytes > 4 * 1024 * 1024) {
+        throw new Error('One or more images exceed the 4MB size limit. Please choose a smaller image or let the crop tool compress it further.');
+      }
+      return img;
+    }).filter(Boolean);
   }
  
   app.use(express.json({ limit: '50mb' }));
@@ -115,6 +173,107 @@ function processImages(images: string[]): string[] {
     res.json({ user: req.user });
   });
 
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const user = await prisma.user.findUnique({ where: { email } });
+      const genericMessage = 'If an account exists for that email, a reset code has been sent.';
+
+      if (!user || user.role === 'admin') {
+        // Do not reveal that an admin account exists or if an account doesn't exist
+        return res.json({ message: genericMessage });
+      }
+
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (!resendApiKey) {
+        console.error('RESEND_API_KEY is not configured.');
+        return res.status(500).json({ error: 'Email service is not configured' });
+      }
+
+      const resend = new Resend(resendApiKey);
+      const senderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+
+      // Invalidate old codes
+      await prisma.passwordResetCode.updateMany({
+        where: { userId: user.id, used: false },
+        data: { used: true }
+      });
+
+      // Generate a 6 digit code
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await prisma.passwordResetCode.create({
+        data: {
+          userId: user.id,
+          code,
+          expiresAt
+        }
+      });
+
+      await resend.emails.send({
+        from: senderEmail,
+        to: email,
+        subject: 'Your Password Reset Code',
+        html: `<p>Your password reset code is: <strong>${code}</strong>. This code expires in 15 minutes.</p>`
+      });
+
+      res.json({ message: genericMessage });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ error: 'Email, code, and new password are required' });
+      }
+
+      const user = await prisma.user.findUnique({ where: { email } });
+      const genericError = 'This code is invalid or has expired. Please request a new one.';
+
+      if (!user || user.role === 'admin') {
+        return res.status(400).json({ error: genericError });
+      }
+
+      const resetCode = await prisma.passwordResetCode.findFirst({
+        where: {
+          userId: user.id,
+          code: code,
+          used: false
+        }
+      });
+
+      if (!resetCode || new Date() > new Date(resetCode.expiresAt)) {
+        return res.status(400).json({ error: genericError });
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash }
+      });
+
+      await prisma.passwordResetCode.update({
+        where: { id: resetCode.id },
+        data: { used: true }
+      });
+
+      res.json({ success: true, message: 'Password updated successfully' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/products', async (req, res) => {
     const activeProducts = await prisma.product.findMany({ where: { status: 'active' } });
     res.json(activeProducts);
@@ -165,57 +324,79 @@ function processImages(images: string[]): string[] {
   });
 
   app.post('/api/orders', async (req, res) => {
-  try {
-    const newOrderData = req.body;
-    
-    // Add orderId if missing
-    if (!newOrderData.orderId) {
-      newOrderData.orderId = 'ORD-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+    try {
+      const newOrderData = req.body;
+      const savedOrder = await createOrderInDatabase(newOrderData);
+      res.json({ success: true, order: savedOrder });
+    } catch (err) {
+      console.error('Order creation failed:', err);
+      res.status(500).json({ success: false, error: 'Failed to create order. Please try again.' });
     }
-    
-    // Unconditionally set receiptUrl server-side
-    newOrderData.receiptUrl = `/receipt/${newOrderData.orderId}`;
+  });
 
-    const savedOrder = await prisma.order.create({
-      data: {
-        orderId: newOrderData.orderId,
-        orderDate: newOrderData.orderDate || new Date().toISOString(),
-        customer: newOrderData.customer || {},
-        pricing: newOrderData.pricing || {},
-        payment: newOrderData.payment || {},
-        status: newOrderData.status || 'Received',
-        estimatedDelivery: newOrderData.estimatedDelivery || '',
-        receiptUrl: newOrderData.receiptUrl,
-        items: {
-          create: newOrderData.items.map((item: any) => ({
-            productId: item.productId,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            mrp: item.mrp || item.price,
-            image: item.image || ''
-          }))
-        },
-        statusHistory: {
-          create: [{
-            status: newOrderData.status || 'Received',
-            timestamp: new Date().toISOString(),
-            note: 'Order placed successfully'
-          }]
-        }
-      },
-      include: {
-        items: true,
-        statusHistory: true
+  app.post('/api/payment/razorpay/create-order', async (req, res) => {
+    try {
+      const { amount } = req.body;
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
       }
-    });
 
-    res.json({ success: true, order: savedOrder });
-  } catch (err) {
-    console.error('Order creation failed:', err);
-    res.status(500).json({ success: false, error: 'Failed to create order. Please try again.' });
-  }
-});
+      if (!razorpayInstance) {
+        return res.status(500).json({ error: 'Razorpay is not configured on the server' });
+      }
+
+      const orderOptions = {
+        amount: Math.round(amount * 100), // convert to paise
+        currency: 'INR',
+        receipt: 'rcpt_' + Math.random().toString(36).substring(2, 9)
+      };
+
+      const order = await razorpayInstance.orders.create(orderOptions);
+      res.json({
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: process.env.RAZORPAY_KEY_ID
+      });
+    } catch (err) {
+      console.error('Failed to create Razorpay order:', err);
+      res.status(500).json({ error: 'Failed to create payment order' });
+    }
+  });
+
+  app.post('/api/payment/razorpay/verify', async (req, res) => {
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderData } = req.body;
+      
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!secret) {
+        return res.status(500).json({ success: false, error: 'Razorpay secret not configured' });
+      }
+
+      const generatedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex');
+
+      if (generatedSignature !== razorpay_signature) {
+        return res.status(400).json({ success: false, error: 'Payment verification failed.' });
+      }
+
+      // Update payment info in orderData
+      if (!orderData.payment) orderData.payment = {};
+      orderData.payment.method = 'razorpay';
+      orderData.payment.status = 'paid';
+      orderData.payment.razorpayOrderId = razorpay_order_id;
+      orderData.payment.razorpayPaymentId = razorpay_payment_id;
+      orderData.payment.paidAt = new Date().toISOString();
+
+      const savedOrder = await createOrderInDatabase(orderData);
+      res.json({ success: true, order: savedOrder });
+    } catch (err) {
+      console.error('Razorpay verification failed:', err);
+      res.status(500).json({ success: false, error: 'Failed to verify payment and create order.' });
+    }
+  });
 
 // GET /api/orders/lookup
 app.get('/api/orders/lookup', async (req, res) => {
@@ -333,39 +514,49 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
   });
 
   app.post('/api/admin/products', requireAuth, requireAdmin, async (req, res) => {
-    const { name, price, weight, stock, status, originalPrice, discount, description, images, image, ingredients, nutrition, baseProductName } = req.body;
-    
-    if (!name || price === undefined || !weight) {
-      return res.status(400).json({ error: 'Name, price, and weight are required.' });
-    }
-    if (typeof price !== 'number' || price < 0) {
-      return res.status(400).json({ error: 'Price must be a non-negative number.' });
-    }
-    
-    const initialStock = stock !== undefined ? stock : 0;
-    if (typeof initialStock !== 'number' || initialStock < 0) {
-      return res.status(400).json({ error: 'Stock must be a non-negative number.' });
-    }
-
-    let processedImages = processImages(images || (image ? [image] : []));
-
-    const newProduct = await prisma.product.create({
-      data: {
-        name,
-        price,
-        weight,
-        stock: initialStock,
-        status: status || 'active',
-        originalPrice: originalPrice || price,
-        discount: discount || 0,
-        description: description || '',
-        images: processedImages,
-        ingredients: ingredients || null,
-        nutrition: nutrition || null,
-        baseProductName: baseProductName || null
+    try {
+      const { name, price, weight, stock, status, originalPrice, discount, description, images, image, ingredients, nutrition, baseProductName } = req.body;
+      
+      if (!name || price === undefined || !weight) {
+        return res.status(400).json({ error: 'Name, price, and weight are required.' });
       }
-    });
-    res.json(newProduct);
+      if (typeof price !== 'number' || price < 0) {
+        return res.status(400).json({ error: 'Price must be a non-negative number.' });
+      }
+      
+      const initialStock = stock !== undefined ? stock : 0;
+      if (typeof initialStock !== 'number' || initialStock < 0) {
+        return res.status(400).json({ error: 'Stock must be a non-negative number.' });
+      }
+
+      let processedImages;
+      try {
+        processedImages = processImages(images || (image ? [image] : []));
+      } catch (err: any) {
+        return res.status(400).json({ error: err.message });
+      }
+
+      const newProduct = await prisma.product.create({
+        data: {
+          name,
+          price,
+          weight,
+          stock: initialStock,
+          status: status || 'active',
+          originalPrice: originalPrice || price,
+          discount: discount || 0,
+          description: description || '',
+          images: processedImages,
+          ingredients: ingredients || null,
+          nutrition: nutrition || null,
+          baseProductName: baseProductName || null
+        }
+      });
+      res.json(newProduct);
+    } catch (e: any) {
+      console.error(e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.put('/api/admin/products/:id', requireAuth, requireAdmin, async (req, res) => {
@@ -378,17 +569,43 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
         return res.status(400).json({ error: 'Stock must be a non-negative number.' });
       }
 
+      let processedImages = updates.images;
       if (updates.images) {
-        updates.images = processImages(updates.images);
+        try {
+          processedImages = processImages(updates.images);
+        } catch (err: any) {
+          return res.status(400).json({ error: err.message });
+        }
       }
+
+      const { name, description, price, originalPrice, discount, weight, ingredients, nutrition, stock, status, baseProductName } = updates;
+      
+      const dataToUpdate: any = {};
+      if (name !== undefined) dataToUpdate.name = name;
+      if (description !== undefined) dataToUpdate.description = description;
+      if (price !== undefined) dataToUpdate.price = price;
+      if (originalPrice !== undefined) dataToUpdate.originalPrice = originalPrice;
+      if (discount !== undefined) dataToUpdate.discount = discount;
+      if (weight !== undefined) dataToUpdate.weight = weight;
+      if (processedImages !== undefined) dataToUpdate.images = processedImages;
+      if (ingredients !== undefined) dataToUpdate.ingredients = ingredients;
+      if (nutrition !== undefined) dataToUpdate.nutrition = nutrition;
+      if (stock !== undefined) dataToUpdate.stock = stock;
+      if (status !== undefined) dataToUpdate.status = status;
+      if (baseProductName !== undefined) dataToUpdate.baseProductName = baseProductName;
 
       const updated = await prisma.product.update({
         where: { id: req.params.id },
-        data: updates
+        data: dataToUpdate
       });
       res.json(updated);
-    } catch (e) {
-      res.status(404).json({ error: 'Product not found.' });
+    } catch (e: any) {
+      console.error('Error updating product:', e);
+      if (e.code === 'P2025' || e.message === 'Product not found') {
+        res.status(404).json({ error: 'Product not found.' });
+      } else {
+        res.status(500).json({ error: e.message || 'Internal server error' });
+      }
     }
   });
 

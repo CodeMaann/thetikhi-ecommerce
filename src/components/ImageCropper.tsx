@@ -109,12 +109,14 @@ export function ImageCropper({ imageSrc, onCropComplete, onCancel }: ImageCroppe
 
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onCancel}
             className="px-4 py-2 text-text-muted hover:text-text-primary transition-colors"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleCrop}
             className="px-4 py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded-lg font-bold transition-colors"
           >
