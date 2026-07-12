@@ -60,9 +60,9 @@ export function Contact() {
                  <h4 className="text-text-primary font-bold">Chat with us</h4>
                  <p className="text-[#25D366] text-sm">We're on WhatsApp!</p>
                </div>
-               <button className="px-6 py-2 bg-[#25D366] text-black font-bold rounded-full">
+               <a href="https://wa.me/918178823991?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." target="_blank" rel="noreferrer" className="px-6 py-2 bg-[#25D366] text-black font-bold rounded-full hover:scale-105 transition-transform inline-block">
                  Connect
-               </button>
+               </a>
             </div>
           </div>
 

@@ -22,7 +22,7 @@ export function Footer() {
             </p>
             <div className="flex space-x-4 pt-2">
               <a href="#" className="hover:text-text-primary transition"><Facebook className="w-5 h-5" /></a>
-              <a href="#" className="hover:text-text-primary transition"><Instagram className="w-5 h-5" /></a>
+              <a href="https://www.instagram.com/thetikhi24" target="_blank" rel="noreferrer" className="hover:text-text-primary transition"><Instagram className="w-5 h-5" /></a>
               <a href="#" className="hover:text-text-primary transition"><Twitter className="w-5 h-5" /></a>
             </div>
           </div>
@@ -44,10 +44,10 @@ export function Footer() {
           <div>
             <h4 className="text-text-primary font-bold mb-4">Policies</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-brand-accent transition">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition">Refund Policy</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition">Shipping Policy</a></li>
+              <li><Link to="/privacy-policy" className="hover:text-brand-accent transition">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="hover:text-brand-accent transition">Terms of Service</Link></li>
+              <li><Link to="/refund-policy" className="hover:text-brand-accent transition">Refund Policy</Link></li>
+              <li><Link to="/shipping-policy" className="hover:text-brand-accent transition">Shipping Policy</Link></li>
               <li><button onClick={() => window.dispatchEvent(new Event('open-cookie-preferences'))} className="hover:text-brand-accent transition text-left">Cookie Preferences</button></li>
             </ul>
           </div>

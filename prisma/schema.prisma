@@ -39,6 +39,8 @@ model Order {
   tracking          Json?
   estimatedDelivery String
   receiptUrl        String
+  shiprocketOrderId String?
+  shiprocketShipmentId String?
   items             OrderItem[]
   statusHistory     OrderStatusEvent[]
 }

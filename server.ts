@@ -9,7 +9,24 @@ import { createServer as createViteServer } from 'vite';
 import prisma from './src/server/prisma';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { sendOrderReceiptEmail } from './src/server/email';
+import { sendOrderReceiptEmail, sendNewOrderAlertToOwner } from './src/server/email';
+import { createShiprocketOrder } from './src/server/shiprocket';
+
+console.log('[ENV CHECK] RAZORPAY_KEY_ID present:', !!process.env.RAZORPAY_KEY_ID);
+console.log('[ENV CHECK] RAZORPAY_KEY_ID length:', process.env.RAZORPAY_KEY_ID?.length || 0);
+console.log('[ENV CHECK] RAZORPAY_KEY_ID starts with rzp_:', process.env.RAZORPAY_KEY_ID?.startsWith('rzp_'));
+console.log('[ENV CHECK] RAZORPAY_KEY_SECRET present:', !!process.env.RAZORPAY_KEY_SECRET);
+console.log('[ENV CHECK] RAZORPAY_KEY_SECRET length:', process.env.RAZORPAY_KEY_SECRET?.length || 0);
+console.log('[ENV CHECK] All env var names containing RAZORPAY:', Object.keys(process.env).filter(k => k.toUpperCase().includes('RAZORPAY')));
+
+console.log('[ENV CHECK] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
+console.log('[ENV CHECK] RESEND_API_KEY length:', process.env.RESEND_API_KEY?.length || 0);
+console.log('[ENV CHECK] RESEND_API_KEY starts with re_:', process.env.RESEND_API_KEY?.startsWith('re_'));
+console.log('[ENV CHECK] SENDER_EMAIL present:', !!process.env.SENDER_EMAIL);
+console.log('[ENV CHECK] SENDER_EMAIL value:', process.env.SENDER_EMAIL);
+console.log('[ENV CHECK] OWNER_EMAIL present:', !!process.env.OWNER_EMAIL);
+console.log('[ENV CHECK] OWNER_EMAIL value:', process.env.OWNER_EMAIL);
+console.log('[ENV CHECK] All env var names containing RESEND, SENDER, or OWNER:', Object.keys(process.env).filter(k => k.toUpperCase().includes('RESEND') || k.toUpperCase().includes('SENDER') || k.toUpperCase().includes('OWNER')));
 
 declare global {
   namespace Express {
@@ -31,9 +48,29 @@ if (!ADMIN_USER || !ADMIN_PASS) {
   console.warn('WARNING: ADMIN_EMAIL and ADMIN_PASSWORD environment variables are not set.');
 }
 
-const razorpayInstance = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET 
-  ? new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET }) 
-  : null;
+if (!process.env.OWNER_EMAIL) {
+  console.warn('WARNING: OWNER_EMAIL environment variable is not set. The store owner will not receive new order alerts.');
+}
+
+let _razorpayInstance: Razorpay | null = null;
+function getRazorpayInstance(): Razorpay | null {
+  if (_razorpayInstance) return _razorpayInstance;
+  
+  console.log('[getRazorpayInstance] RAZORPAY_KEY_ID present:', !!process.env.RAZORPAY_KEY_ID);
+  console.log('[getRazorpayInstance] RAZORPAY_KEY_ID length:', process.env.RAZORPAY_KEY_ID?.length || 0);
+  console.log('[getRazorpayInstance] RAZORPAY_KEY_SECRET present:', !!process.env.RAZORPAY_KEY_SECRET);
+  console.log('[getRazorpayInstance] RAZORPAY_KEY_SECRET length:', process.env.RAZORPAY_KEY_SECRET?.length || 0);
+
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    _razorpayInstance = new Razorpay({ 
+      key_id: process.env.RAZORPAY_KEY_ID, 
+      key_secret: process.env.RAZORPAY_KEY_SECRET 
+    });
+    return _razorpayInstance;
+  }
+  
+  return null;
+}
 
 async function createOrderInDatabase(newOrderData: any) {
   if (!newOrderData.orderId) {
@@ -77,7 +114,23 @@ async function createOrderInDatabase(newOrderData: any) {
   });
 
   if (savedOrder.customer && (savedOrder.customer as any).email) {
-    await sendOrderReceiptEmail((savedOrder.customer as any).email, savedOrder);
+    try {
+      await sendOrderReceiptEmail((savedOrder.customer as any).email, savedOrder);
+    } catch (error) {
+      console.error('Failed to send customer receipt email:', error);
+    }
+  }
+
+  try {
+    await sendNewOrderAlertToOwner(savedOrder);
+  } catch (error) {
+    console.error('Failed to send owner alert email in createOrderInDatabase:', error);
+  }
+
+  try {
+    await createShiprocketOrder(savedOrder);
+  } catch (error) {
+    console.error('Failed to create Shiprocket order:', error);
   }
 
   return savedOrder;
@@ -341,7 +394,8 @@ function processImages(images: string[]): string[] {
         return res.status(400).json({ error: 'Invalid amount' });
       }
 
-      if (!razorpayInstance) {
+      const razorpay = getRazorpayInstance();
+      if (!razorpay) {
         return res.status(500).json({ error: 'Razorpay is not configured on the server' });
       }
 
@@ -351,7 +405,7 @@ function processImages(images: string[]): string[] {
         receipt: 'rcpt_' + Math.random().toString(36).substring(2, 9)
       };
 
-      const order = await razorpayInstance.orders.create(orderOptions);
+      const order = await razorpay.orders.create(orderOptions);
       res.json({
         orderId: order.id,
         amount: order.amount,
@@ -395,6 +449,69 @@ function processImages(images: string[]): string[] {
     } catch (err) {
       console.error('Razorpay verification failed:', err);
       res.status(500).json({ success: false, error: 'Failed to verify payment and create order.' });
+    }
+  });
+
+  app.post('/api/webhooks/shiprocket', async (req, res) => {
+    try {
+      const webhookToken = process.env.SHIPROCKET_WEBHOOK_TOKEN;
+      if (webhookToken) {
+        const receivedToken = req.headers['x-api-key'];
+        if (receivedToken !== webhookToken) {
+          return res.status(401).json({ error: 'Unauthorized webhook request' });
+        }
+      }
+
+      const payload = req.body;
+      const shipmentId = payload.shipment_id ? String(payload.shipment_id) : null;
+      const orderId = payload.order_id ? String(payload.order_id) : null;
+      const status = payload.current_status || 'Unknown';
+      const awb = payload.awb || '';
+      const courier = payload.courier_name || '';
+
+      if (!shipmentId && !orderId) {
+        return res.status(400).json({ error: 'Missing shipment_id and order_id in payload' });
+      }
+
+      const order = await prisma.order.findFirst({
+        where: {
+          OR: [
+            ...(shipmentId ? [{ shiprocketShipmentId: shipmentId }] : []),
+            ...(orderId ? [{ shiprocketOrderId: orderId }] : []),
+            ...(payload.channel_order_id ? [{ orderId: String(payload.channel_order_id) }] : [])
+          ]
+        }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found for given Shiprocket ID' });
+      }
+
+      const trackingUrl = awb ? `https://shiprocket.co/tracking/${awb}` : '';
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: status,
+          tracking: {
+            courierName: courier,
+            trackingNumber: awb,
+            trackingUrl: trackingUrl
+          },
+          statusHistory: {
+            create: {
+              status: status,
+              timestamp: new Date().toISOString(),
+              note: `Shiprocket update: ${status}${awb ? ` (${courier} AWB: ${awb})` : ''}`
+            }
+          }
+        }
+      });
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('Error processing Shiprocket webhook:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

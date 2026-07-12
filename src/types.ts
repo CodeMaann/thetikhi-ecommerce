@@ -21,14 +21,21 @@ export interface CartItem extends Product {
 
 export interface Order {
   id: string;
+  orderId?: string;
   customerName: string;
   address: string;
   phone: string;
   paymentMethod: string;
   items: { productId: string; quantity: number; price: number }[];
   total: number;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled' | string;
   date: string;
+  shiprocketOrderId?: string;
+  shiprocketShipmentId?: string;
+  tracking?: any;
+  statusHistory?: any[];
+  customer?: any;
+  pricing?: any;
 }
 
 export interface Coupon {

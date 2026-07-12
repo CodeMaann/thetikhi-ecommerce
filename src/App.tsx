@@ -15,6 +15,10 @@ import { Admin } from './pages/Admin';
 import { OrderTracking } from './pages/OrderTracking';
 import { Receipt } from './pages/Receipt';
 import { MyOrders } from './pages/MyOrders';
+import { TermsOfService } from './pages/TermsOfService';
+import { RefundPolicy } from './pages/RefundPolicy';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { ShippingPolicy } from './pages/ShippingPolicy';
 import { MessageCircle } from 'lucide-react';
 import { trackPageView } from './lib/analytics';
 import { CookieConsent } from './components/CookieConsent';
@@ -46,6 +50,10 @@ function AnimatedRoutes() {
         <Route path="/track-order/:orderId?" element={<PageTransition><OrderTracking /></PageTransition>} />
         <Route path="/receipt/:orderId" element={<PageTransition><Receipt /></PageTransition>} />
         <Route path="/my-orders" element={<PageTransition><MyOrders /></PageTransition>} />
+        <Route path="/terms-of-service" element={<PageTransition><TermsOfService /></PageTransition>} />
+        <Route path="/refund-policy" element={<PageTransition><RefundPolicy /></PageTransition>} />
+        <Route path="/privacy-policy" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+        <Route path="/shipping-policy" element={<PageTransition><ShippingPolicy /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   );
@@ -99,7 +107,7 @@ export default function App() {
         
         {/* Floating WhatsApp Button */}
         <a 
-          href="https://wa.me/918178823991" 
+          href="https://wa.me/918178823991?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." 
           target="_blank" 
           rel="noreferrer"
           className="fixed bottom-6 right-6 w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50"

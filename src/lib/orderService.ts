@@ -46,6 +46,8 @@ export interface Order {
     trackingNumber: string;
     trackingUrl: string;
   };
+  shiprocketOrderId?: string;
+  shiprocketShipmentId?: string;
   estimatedDelivery: string;
   receiptUrl: string;
 }

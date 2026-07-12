@@ -660,20 +660,36 @@ export function Admin() {
                   </div>
                 </div>
 
-                <h3 className="text-sm font-bold text-text-muted mb-2 uppercase">Update Tracking</h3>
+                <h3 className="text-sm font-bold text-text-muted mb-2 uppercase">Tracking & Shipping</h3>
+                {(selectedOrder.shiprocketOrderId || selectedOrder.shiprocketShipmentId) && (
+                  <div className="bg-[#f0f7ff] p-4 rounded-xl border border-blue-200 text-sm mb-4">
+                    <p className="text-blue-700 font-bold mb-1 flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                      Tracking updates automatically via Shiprocket
+                    </p>
+                    {selectedOrder.shiprocketOrderId && <p className="text-blue-900/70">Shiprocket Order ID: {selectedOrder.shiprocketOrderId}</p>}
+                    {selectedOrder.shiprocketShipmentId && <p className="text-blue-900/70">Shipment ID: {selectedOrder.shiprocketShipmentId}</p>}
+                  </div>
+                )}
+                
                 {selectedOrder.status === 'shipped' || selectedOrder.tracking?.trackingNumber ? (
-                  <div className="bg-bg-base p-4 rounded-xl border border-green-500/20 text-sm">
+                  <div className="bg-bg-base p-4 rounded-xl border border-green-500/20 text-sm mb-4">
                     <p className="text-green-500 font-bold mb-1">Shipped</p>
                     <p className="text-text-secondary">Courier: {selectedOrder.tracking?.courierName}</p>
                     <p className="text-text-secondary">Tracking: {selectedOrder.tracking?.trackingNumber}</p>
                   </div>
-                ) : (
-                  <form onSubmit={updateTracking} className="space-y-3">
+                ) : null}
+
+                <details className="text-sm group mt-4">
+                  <summary className="cursor-pointer text-text-secondary hover:text-brand-primary font-medium mb-2 outline-none">
+                    Manual Tracking Override
+                  </summary>
+                  <form onSubmit={updateTracking} className="space-y-3 pt-2">
                     <input type="text" required placeholder="Courier Name (e.g. Delhivery)" value={courier} onChange={e => setCourier(e.target.value)} className="w-full bg-bg-base border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-primary" />
                     <input type="text" required placeholder="Tracking Number" value={trackingNo} onChange={e => setTrackingNo(e.target.value)} className="w-full bg-bg-base border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-primary" />
-                    <button type="submit" className="w-full py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded text-sm font-bold transition-colors">Mark as Shipped</button>
+                    <button type="submit" className="w-full py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded text-sm font-bold transition-colors">Mark as Shipped (Manual Override)</button>
                   </form>
-                )}
+                </details>
               </div>
             </div>
             
