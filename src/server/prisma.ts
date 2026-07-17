@@ -93,7 +93,7 @@ users.push({
 const mockPrisma = {
   $connect: async () => {},
   $disconnect: async () => {},
-  
+
   user: {
     findUnique: async ({ where }: any) => {
       if (where.email) {
@@ -118,7 +118,7 @@ const mockPrisma = {
       let idx = -1;
       if (where.email) idx = users.findIndex(u => u.email.toLowerCase() === where.email.toLowerCase());
       else if (where.id) idx = users.findIndex(u => u.id === where.id);
-      
+
       if (idx !== -1) {
         users[idx] = { ...users[idx], ...data };
         return users[idx];
@@ -126,7 +126,7 @@ const mockPrisma = {
       throw new Error("User not found");
     }
   },
-  
+
   passwordResetCode: {
     create: async ({ data }: any) => {
       const newCode = {
@@ -216,8 +216,8 @@ const mockPrisma = {
   coupon: {
     findFirst: async ({ where }: any) => {
       if (where?.code) {
-        const searchCode = typeof where.code === 'string' 
-          ? where.code 
+        const searchCode = typeof where.code === 'string'
+          ? where.code
           : (where.code.equals || '');
         return coupons.find(c => c.code.toLowerCase() === searchCode.toLowerCase()) || null;
       }
@@ -260,13 +260,13 @@ const mockPrisma = {
       const { items, statusHistory, ...rest } = data;
       const orderId = rest.orderId || 'ORD-' + Math.random().toString(36).substring(2, 9).toUpperCase();
       const internalId = Math.random().toString(36).substring(7);
-      
+
       const createdItems = (items?.create || []).map((item: any) => ({
         id: Math.random().toString(36).substring(7),
         orderId: internalId,
         ...item
       }));
-      
+
       const createdStatusHistory = (statusHistory?.create || []).map((h: any) => ({
         id: Math.random().toString(36).substring(7),
         orderId: internalId,
@@ -355,8 +355,8 @@ const mockPrisma = {
         order.tracking = data.tracking;
       }
       if (data.statusHistory?.create) {
-        const list = Array.isArray(data.statusHistory.create) 
-          ? data.statusHistory.create 
+        const list = Array.isArray(data.statusHistory.create)
+          ? data.statusHistory.create
           : [data.statusHistory.create];
         for (const h of list) {
           order.statusHistory.push({
@@ -398,7 +398,7 @@ const mockPrisma = {
         ...data
       };
       reviews.push(newReview);
-      
+
       const userObj = users.find(u => u.id === data.userId);
       return {
         ...newReview,
@@ -410,33 +410,58 @@ const mockPrisma = {
   }
 };
 
-let prismaInstance: any = null;
+// ---------------------------------------------------------------------------
+// Connection handling with timeout + safe fallback (fixes the hang/crash-loop
+// bug: PrismaClient connects lazily, so the old code never actually verified
+// a real connection before using it. This now tests the connection ONCE at
+// startup, with an explicit timeout, before the server starts accepting
+// requests.
+// ---------------------------------------------------------------------------
 
-function getPrisma(): any {
-  if (!prismaInstance) {
-    const dbUrl = process.env.DATABASE_URL;
-    if (dbUrl) {
-      console.log("[AI Studio] DATABASE_URL detected. Initializing real Prisma Client...");
-      try {
-        prismaInstance = new PrismaClient();
-      } catch (err) {
-        console.error("[AI Studio] Failed to initialize real Prisma client. Falling back to Mock.", err);
-        prismaInstance = mockPrisma;
-      }
-    } else {
-      console.warn("[AI Studio] DATABASE_URL is not set. Falling back to fully functional In-Memory Mock Database.");
-      prismaInstance = mockPrisma;
-    }
+let prismaInstance: any = mockPrisma;
+
+async function warmUpPrisma(): Promise<void> {
+  const dbUrl = process.env.DATABASE_URL;
+
+  if (!dbUrl) {
+    console.warn("[DB] DATABASE_URL is not set. Using in-memory mock database.");
+    prismaInstance = mockPrisma;
+    return;
   }
-  return prismaInstance;
+
+  console.log("[DB] DATABASE_URL detected. Testing real database connection...");
+
+  try {
+    const client = new PrismaClient();
+
+    await Promise.race([
+      client.$connect(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Connection timed out after 8 seconds")), 8000)
+      )
+    ]);
+
+    prismaInstance = client;
+    console.log("[DB] Connected to real database successfully.");
+  } catch (err: any) {
+    console.error(
+      "[DB] Failed to connect to real database. Falling back to in-memory mock. Reason:",
+      err?.message || err
+    );
+    prismaInstance = mockPrisma;
+  }
 }
+
+// Exported promise — server.ts should `await dbReady` before app.listen()
+// so the server knows definitively at boot time whether the real database
+// is reachable, instead of finding out mid-request.
+export const dbReady: Promise<void> = warmUpPrisma();
 
 const prisma = new Proxy({} as any, {
   get(target, prop, receiver) {
-    const instance = getPrisma();
-    const value = Reflect.get(instance, prop);
+    const value = Reflect.get(prismaInstance, prop);
     if (typeof value === 'function') {
-      return value.bind(instance);
+      return value.bind(prismaInstance);
     }
     return value;
   }
