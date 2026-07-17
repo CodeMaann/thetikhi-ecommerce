@@ -26,6 +26,8 @@ model Product {
   nutrition     String?
   stock         Int     @default(0)
   status        String  @default("active") // active or inactive
+  variantType   String  @default("single") // "single" or "combo"
+  comboItems    Json?
 }
 
 model Order {
@@ -110,4 +112,11 @@ model Review {
   rating      Int
   comment     String
   createdAt   DateTime @default(now())
+}
+
+model SiteSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String?
+  updatedAt DateTime @updatedAt
 }

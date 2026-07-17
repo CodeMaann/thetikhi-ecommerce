@@ -28,6 +28,13 @@ import { safeFetch } from './lib/api';
 
 import { ScrollToTop } from './components/ScrollToTop';
 
+declare global {
+  interface Window {
+    fbq: any;
+    _fbq: any;
+  }
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
   
@@ -75,6 +82,51 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   const { token, login, logout } = useStore();
+
+  useEffect(() => {
+    safeFetch('/api/settings/meta-pixel')
+      .then(data => {
+        if (data.value) {
+          // Note: When a cookie consent state is available, wrap this logic to require consent first.
+          const value = data.value.trim();
+          
+          if (/^\d+$/.test(value)) {
+            // It's a raw numeric ID, inject standard fbq init
+            (function(f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+            n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)})(window,
+            document,'script','https://connect.facebook.net/en_US/fbevents.js');
+            // @ts-ignore
+            fbq('init', value);
+            // @ts-ignore
+            fbq('track', 'PageView');
+          } else if (value.includes('<script')) {
+            // It's a full script snippet, inject as-is
+            // We create a temporary element to parse the script tag(s)
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = value;
+            const scripts = wrapper.querySelectorAll('script');
+            scripts.forEach(script => {
+              const newScript = document.createElement('script');
+              if (script.src) {
+                newScript.src = script.src;
+                newScript.async = true;
+              } else {
+                newScript.textContent = script.textContent;
+              }
+              document.head.appendChild(newScript);
+            });
+            // Also inject any noscript tags
+            const noscripts = wrapper.querySelectorAll('noscript');
+            noscripts.forEach(noscript => {
+              document.head.appendChild(noscript.cloneNode(true));
+            });
+          }
+        }
+      })
+      .catch(err => console.error('Failed to load Meta Pixel setting:', err));
+  }, []);
 
   useEffect(() => {
     if (token) {

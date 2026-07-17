@@ -1,11 +1,46 @@
 import { Placeholder } from "../components/Placeholder";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram, Twitter, MapPin, Phone, Mail } from 'lucide-react';
+import { safeFetch } from '../lib/api';
 
 export function Footer() {
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
+
+  useEffect(() => {
+    safeFetch('/api/settings/instagram_url')
+      .then(data => {
+        if (data && data.value) setInstagramUrl(data.value);
+      })
+      .catch(() => {});
+      
+    safeFetch('/api/settings/instagram_handle')
+      .then(data => {
+        if (data && data.value) setInstagramHandle(data.value);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
-    <footer className="bg-bg-base border-t border-border pt-16 pb-8 text-text-muted">
+    <>
+      {instagramUrl && (
+        <section className="bg-bg-surface border-t border-border py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center space-y-4">
+            <h3 className="text-lg font-bold text-text-primary">Follow Us on Instagram</h3>
+            <a 
+              href={instagramUrl} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="inline-flex items-center space-x-2 text-brand-primary hover:text-[#A01830] transition-colors"
+            >
+              <Instagram className="w-6 h-6" />
+              <span className="font-bold text-lg">{instagramHandle || 'Instagram'}</span>
+            </a>
+          </div>
+        </section>
+      )}
+      <footer className="bg-bg-base border-t border-border pt-16 pb-8 text-text-muted">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
@@ -87,5 +122,6 @@ export function Footer() {
         </div>
       </div>
     </footer>
+    </>
   );
 }

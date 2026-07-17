@@ -13,6 +13,8 @@ export interface Product {
   stock: number;
   baseProductName?: string;
   status: 'active' | 'inactive';
+  variantType?: 'single' | 'combo' | string;
+  comboItems?: { baseProductName: string; quantity: number }[];
 }
 
 export interface CartItem extends Product {

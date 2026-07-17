@@ -13,7 +13,12 @@ export function Admin() {
   const navigate = useNavigate();
   const { user, token } = useStore();
   
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'coupons'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'coupons' | 'settings'>('orders');
+
+  // Settings State
+  const [metaPixelId, setMetaPixelId] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -32,7 +37,8 @@ export function Admin() {
   
   const initialProductForm = {
     name: '', description: '', price: 0, originalPrice: 0, discount: 0,
-    weight: '', images: [], image: '', ingredients: '', nutrition: '', stock: 0, status: 'active' as 'active' | 'inactive'
+    weight: '', images: [], image: '', ingredients: '', nutrition: '', stock: 0, status: 'active' as 'active' | 'inactive',
+    variantType: 'single' as 'single' | 'combo', comboItems: [] as { baseProductName: string, quantity: number }[]
   };
   const [productForm, setProductForm] = useState<Omit<Product, "id">>(initialProductForm);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
@@ -55,7 +61,73 @@ export function Admin() {
     loadOrders();
     loadProducts();
     loadCoupons();
+    loadSettings();
   }, [user, navigate, token]);
+
+  const loadSettings = async () => {
+    try {
+      const resMeta = await fetch('/api/admin/settings/meta-pixel', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resMeta.ok) {
+        const data = await resMeta.json();
+        setMetaPixelId(data.value || '');
+      }
+
+      const resInstaUrl = await fetch('/api/admin/settings/instagram_url', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resInstaUrl.ok) {
+        const data = await resInstaUrl.json();
+        setInstagramUrl(data.value || '');
+      }
+
+      const resInstaHandle = await fetch('/api/admin/settings/instagram_handle', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resInstaHandle.ok) {
+        const data = await resInstaHandle.json();
+        setInstagramHandle(data.value || '');
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const saveSetting = async (key: string, value: string) => {
+    const res = await fetch(`/api/admin/settings/${key}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ value })
+    });
+    
+    if (res.ok) {
+      toast.success(`${key} saved successfully`);
+    } else {
+      const err = await res.json();
+      toast.error(err.error || `Failed to save ${key}`);
+    }
+  };
+
+  const saveMetaPixelId = async () => {
+    try {
+      await saveSetting('meta-pixel', metaPixelId);
+    } catch (error) {
+      toast.error('Failed to save meta-pixel setting');
+    }
+  };
+
+  const saveInstagramSettings = async () => {
+    try {
+      await saveSetting('instagram_url', instagramUrl);
+      await saveSetting('instagram_handle', instagramHandle);
+    } catch (error) {
+      toast.error('Failed to save instagram settings');
+    }
+  };
 
   const loadOrders = async () => {
     if (!token) return;
@@ -378,6 +450,12 @@ export function Admin() {
             >
               Coupons
             </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`px-6 py-2 rounded-md font-medium transition-colors flex-1 md:flex-none ${activeTab === 'settings' ? 'bg-brand-primary text-white' : 'text-text-muted hover:text-text-primary'}`}
+            >
+              Settings
+            </button>
           </div>
         </div>
 
@@ -612,6 +690,75 @@ export function Admin() {
               </table>
             </div>
           </>
+        ) : activeTab === 'settings' ? (
+          <div className="bg-bg-elevated border border-border p-6 rounded-2xl max-w-2xl">
+            <h2 className="text-xl font-bold mb-4">Site Settings</h2>
+            
+            <div className="space-y-6">
+              <div className="bg-bg-base p-4 rounded-xl border border-border">
+                <h3 className="text-lg font-bold mb-4">Meta Pixel</h3>
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Meta Pixel ID or Script
+                </label>
+                <textarea
+                  value={metaPixelId}
+                  onChange={(e) => setMetaPixelId(e.target.value)}
+                  placeholder="Paste your Meta Pixel ID (numbers only) or a full pixel base code snippet. This will be automatically added to every page."
+                  rows={6}
+                  className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary font-mono text-sm"
+                />
+                <p className="mt-2 text-sm text-text-muted mb-4">
+                  Paste your Meta Pixel ID (numbers only) or a full pixel base code snippet. This will be automatically added to every page.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={saveMetaPixelId}
+                    className="px-6 py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded-lg font-bold transition-colors"
+                  >
+                    Save Meta Pixel
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-bg-base p-4 rounded-xl border border-border">
+                <h3 className="text-lg font-bold mb-4">Instagram</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Instagram Profile URL
+                    </label>
+                    <input
+                      type="url"
+                      value={instagramUrl}
+                      onChange={(e) => setInstagramUrl(e.target.value)}
+                      placeholder="https://instagram.com/thetikhi"
+                      className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">
+                      Instagram Handle (display text)
+                    </label>
+                    <input
+                      type="text"
+                      value={instagramHandle}
+                      onChange={(e) => setInstagramHandle(e.target.value)}
+                      placeholder="@thetikhi"
+                      className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={saveInstagramSettings}
+                    className="px-6 py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded-lg font-bold transition-colors"
+                  >
+                    Save Instagram
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : null}
       </div>
 
@@ -831,6 +978,71 @@ export function Admin() {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-text-muted mb-1">Product Type</label>
+                  <select 
+                    value={productForm.variantType || 'single'} 
+                    onChange={e => setProductForm({...productForm, variantType: e.target.value as 'single'|'combo', comboItems: e.target.value === 'single' ? [] : (productForm.comboItems || [])})} 
+                    className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary">
+                    <option value="single">Single Item</option>
+                    <option value="combo">Combo Pack</option>
+                  </select>
+                </div>
+
+                {productForm.variantType === 'combo' && (
+                  <div className="md:col-span-2 space-y-4 border border-border rounded-lg p-4 bg-bg-surface">
+                    <h4 className="font-bold text-text-primary">Included Items</h4>
+                    {(productForm.comboItems || []).map((item, index) => (
+                      <div key={index} className="flex items-center gap-4">
+                        <input
+                          type="text"
+                          placeholder="Item Name (e.g. Aloo Ka Achar)"
+                          value={item.baseProductName}
+                          onChange={e => {
+                            const newItems = [...(productForm.comboItems || [])];
+                            newItems[index].baseProductName = e.target.value;
+                            setProductForm({ ...productForm, comboItems: newItems });
+                          }}
+                          className="flex-1 bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          min="1"
+                          value={item.quantity || ''}
+                          onChange={e => {
+                            const newItems = [...(productForm.comboItems || [])];
+                            newItems[index].quantity = parseInt(e.target.value) || 1;
+                            setProductForm({ ...productForm, comboItems: newItems });
+                          }}
+                          className="w-24 bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newItems = [...(productForm.comboItems || [])];
+                            newItems.splice(index, 1);
+                            setProductForm({ ...productForm, comboItems: newItems });
+                          }}
+                          className="p-2 text-brand-primary hover:bg-brand-primary/10 rounded-lg"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({
+                        ...productForm, 
+                        comboItems: [...(productForm.comboItems || []), { baseProductName: '', quantity: 1 }]
+                      })}
+                      className="text-brand-primary font-bold hover:underline flex items-center"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add another item
+                    </button>
+                  </div>
+                )}
               </div>
               
               <div className="mt-8 flex justify-end gap-4">

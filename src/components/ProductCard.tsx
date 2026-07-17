@@ -9,11 +9,18 @@ export function ProductCard({ product }: { product: Product }) {
     <div
       className="group relative bg-bg-surface rounded-3xl p-6 border border-border hover:border-brand-accent/50 transition-all flex flex-col h-full"
     >
-      {product.discount && product.discount > 0 ? (
-        <div className="absolute top-4 right-4 bg-brand-primary text-white text-xs font-bold px-3 py-1 rounded-full z-10">
-          {product.discount}% OFF
-        </div>
-      ) : null}
+      <div className="absolute top-4 right-4 flex flex-col gap-2 z-10 items-end">
+        {product.discount && product.discount > 0 ? (
+          <div className="bg-brand-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+            {product.discount}% OFF
+          </div>
+        ) : null}
+        {product.variantType === 'combo' && (
+          <div className="bg-text-primary text-bg-base text-xs font-bold px-3 py-1 rounded-full">
+            Combo Pack
+          </div>
+        )}
+      </div>
       
       <Link to={`/product/${product.id}`} className="block relative h-64 mb-6 rounded-2xl bg-bg-surface border border-border overflow-hidden group-hover:border-brand-accent/50 transition-colors">
         {(product.images?.[0]) ? (

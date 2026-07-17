@@ -313,6 +313,20 @@ export function ProductDetail() {
             {activeTab === 'description' && (
               <div className="prose prose-invert max-w-none text-text-muted">
                 <p className="whitespace-pre-wrap">{product.description || 'No description available.'}</p>
+                
+                {product.variantType === 'combo' && product.comboItems && product.comboItems.length > 0 && (
+                  <div className="mt-8 p-6 bg-bg-surface border border-brand-accent/20 rounded-xl">
+                    <h4 className="text-text-primary font-bold mb-4">What's Included</h4>
+                    <ul className="space-y-2 list-disc pl-5">
+                      {product.comboItems.map((item, idx) => (
+                        <li key={idx}>
+                          <span className="font-bold">{item.quantity} x</span> {item.baseProductName}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="mt-8 p-6 bg-bg-surface border border-border rounded-xl">
                   <h4 className="text-text-primary font-bold mb-2">Storage Instructions</h4>
                   <p>Store in a cool, dry place. Refrigerate after opening. Best before 6 months from packaging.</p>

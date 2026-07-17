@@ -632,7 +632,7 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
 
   app.post('/api/admin/products', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { name, price, weight, stock, status, originalPrice, discount, description, images, image, ingredients, nutrition, baseProductName } = req.body;
+      const { name, price, weight, stock, status, originalPrice, discount, description, images, image, ingredients, nutrition, baseProductName, variantType, comboItems } = req.body;
       
       if (!name || price === undefined || !weight) {
         return res.status(400).json({ error: 'Name, price, and weight are required.' });
@@ -666,7 +666,9 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
           images: processedImages,
           ingredients: ingredients || null,
           nutrition: nutrition || null,
-          baseProductName: baseProductName || null
+          baseProductName: baseProductName || null,
+          variantType: variantType || 'single',
+          comboItems: comboItems || null
         }
       });
       res.json(newProduct);
@@ -695,7 +697,7 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
         }
       }
 
-      const { name, description, price, originalPrice, discount, weight, ingredients, nutrition, stock, status, baseProductName } = updates;
+      const { name, description, price, originalPrice, discount, weight, ingredients, nutrition, stock, status, baseProductName, variantType, comboItems } = updates;
       
       const dataToUpdate: any = {};
       if (name !== undefined) dataToUpdate.name = name;
@@ -710,6 +712,8 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       if (stock !== undefined) dataToUpdate.stock = stock;
       if (status !== undefined) dataToUpdate.status = status;
       if (baseProductName !== undefined) dataToUpdate.baseProductName = baseProductName;
+      if (variantType !== undefined) dataToUpdate.variantType = variantType;
+      if (comboItems !== undefined) dataToUpdate.comboItems = comboItems;
 
       const updated = await prisma.product.update({
         where: { id: req.params.id },
@@ -732,6 +736,44 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       res.json({ success: true });
     } catch (e) {
       res.status(404).json({ error: 'Product not found.' });
+    }
+  });
+
+  app.get('/api/settings/:key', async (req, res) => {
+    try {
+      const setting = await prisma.siteSetting.findUnique({ where: { key: req.params.key } });
+      res.json({ value: setting?.value || null });
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  app.get('/api/admin/settings/:key', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const setting = await prisma.siteSetting.findUnique({ where: { key: req.params.key } });
+      res.json({ key: req.params.key, value: setting?.value || null });
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  app.put('/api/admin/settings/:key', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { value } = req.body;
+      const trimmedValue = value ? value.trim() : null;
+      
+      if (!trimmedValue) {
+        return res.status(400).json({ error: 'Value is required' });
+      }
+
+      const updated = await prisma.siteSetting.upsert({
+        where: { key: req.params.key },
+        update: { value: trimmedValue },
+        create: { key: req.params.key, value: trimmedValue }
+      });
+      res.json(updated);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
