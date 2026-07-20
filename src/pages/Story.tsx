@@ -107,7 +107,7 @@ export function Story() {
             </div>
           </motion.div>
           <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
-            <Placeholder className="w-full aspect-square rounded-3xl" />
+            <img src="founder.jpg" alt="The Tikhi Founder" className="w-full aspect-square rounded-3xl object-cover" />
           </motion.div>
         </div>
       </section>
