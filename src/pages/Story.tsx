@@ -107,7 +107,10 @@ export function Story() {
             </div>
           </motion.div>
           <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
-            <Placeholder className="w-full aspect-square rounded-3xl" />
+            <div className="w-full aspect-square rounded-3xl overflow-hidden shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ring-4 ring-bg-surface hover:ring-brand-primary/50 relative group">
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+              <img src="/our story.png" alt="Bringing Back the Taste of Home" className="w-full h-full object-cover object-top" />
+            </div>
           </motion.div>
         </div>
       </section>
@@ -153,19 +156,19 @@ export function Story() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
-            { icon: ChefHat, title: "Authentic Homemade Recipes", desc: "Prepared using traditional cooking methods." },
-            { icon: Leaf, title: "Premium Ingredients", desc: "Fresh vegetables, natural spices and high-quality mustard oil." },
-            { icon: Utensils, title: "Small Batch Production", desc: "Every batch receives the attention it deserves." },
-            { icon: ShieldCheck, title: "No Artificial Colours", desc: "Natural ingredients with authentic taste." },
-            { icon: Sun, title: "Rich Indian Flavours", desc: "Bold spices inspired by traditional Indian kitchens." },
-            { icon: ThumbsUp, title: "Trusted by Happy Customers", desc: "Thousands of families enjoy The Tikhi every day." },
+            { icon: ChefHat, title: "Authentic Homemade Recipes", desc: "Prepared using traditional cooking methods.", color: "text-brand-primary", bgColor: "bg-brand-primary/10" },
+            { icon: Leaf, title: "Premium Ingredients", desc: "Fresh vegetables, natural spices and high-quality mustard oil.", color: "text-[#4CAF50]", bgColor: "bg-[#4CAF50]/10" },
+            { icon: Utensils, title: "Small Batch Production", desc: "Every batch receives the attention it deserves.", color: "text-[#D4A017]", bgColor: "bg-[#D4A017]/10" },
+            { icon: ShieldCheck, title: "No Artificial Colours", desc: "Natural ingredients with authentic taste.", color: "text-brand-accent", bgColor: "bg-brand-accent/10" },
+            { icon: Sun, title: "Rich Indian Flavours", desc: "Bold spices inspired by traditional Indian kitchens.", color: "text-brand-primary", bgColor: "bg-brand-primary/10" },
+            { icon: ThumbsUp, title: "Trusted by Happy Customers", desc: "Thousands of families enjoy The Tikhi every day.", color: "text-[#4CAF50]", bgColor: "bg-[#4CAF50]/10" },
           ].map((item, i) => (
-            <motion.div key={i} {...fadeInUp} transition={{ delay: i * 0.1 }} className="flex items-start space-x-4 p-6 bg-bg-surface border border-border rounded-2xl">
-              <div className="w-12 h-12 flex-shrink-0 bg-brand-primary/10 rounded-full flex items-center justify-center text-brand-primary">
-                <item.icon className="w-6 h-6" />
+            <motion.div key={i} {...fadeInUp} transition={{ delay: i * 0.1 }} className="flex items-start space-x-6 p-6 bg-gradient-to-br from-bg-surface to-bg-hover border border-border hover:border-brand-primary rounded-2xl group hover:-translate-y-2 hover:shadow-xl transition-all duration-300">
+              <div className={`w-16 h-16 flex-shrink-0 ${item.bgColor} ${item.color} rounded-full flex items-center justify-center`}>
+                <item.icon className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="font-bold text-text-primary mb-1">{item.title}</h3>
+                <h3 className="font-bold text-lg text-text-primary mb-2 group-hover:text-brand-primary transition-colors">{item.title}</h3>
                 <p className="text-sm text-text-muted leading-relaxed">{item.desc}</p>
               </div>
             </motion.div>
@@ -182,22 +185,30 @@ export function Story() {
           </motion.div>
 
           <div className="relative">
-            {/* Connecting line for desktop */}
-            <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-border -translate-y-1/2" />
+            {/* Connecting line for desktop (Animated) */}
+            <div className="hidden md:block absolute top-8 left-[10%] w-[80%] h-1 bg-border rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }} 
+                whileInView={{ width: "100%" }} 
+                viewport={{ once: true }} 
+                transition={{ duration: 1.5, ease: "easeOut" }} 
+                className="h-full bg-brand-primary" 
+              />
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative z-10">
               {[
-                { icon: Leaf, label: "Fresh Ingredients" },
-                { icon: ChefHat, label: "Traditional Preparation" },
-                { icon: Sun, label: "Authentic Spice Blend" },
-                { icon: Package, label: "Carefully Packed" },
-                { icon: Truck, label: "Delivered Fresh to Your Home" }
+                { icon: Leaf, label: "Fresh Ingredients", color: "text-[#4CAF50]", bgColor: "bg-[#4CAF50]/10" },
+                { icon: ChefHat, label: "Traditional Preparation", color: "text-[#D4A017]", bgColor: "bg-[#D4A017]/10" },
+                { icon: Sun, label: "Authentic Spice Blend", color: "text-brand-primary", bgColor: "bg-brand-primary/10" },
+                { icon: Package, label: "Carefully Packed", color: "text-brand-accent", bgColor: "bg-brand-accent/10" },
+                { icon: Truck, label: "Delivered Fresh to Your Home", color: "text-[#4CAF50]", bgColor: "bg-[#4CAF50]/10" }
               ].map((step, i) => (
-                <motion.div key={i} {...fadeInUp} transition={{ delay: i * 0.1 }} className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 bg-bg-base border-2 border-brand-primary rounded-full flex items-center justify-center text-brand-primary mb-4 shadow-lg">
+                <motion.div key={i} {...fadeInUp} transition={{ delay: i * 0.2 }} className="flex flex-col items-center text-center group">
+                  <div className={`w-16 h-16 bg-bg-base border-2 border-border group-hover:border-brand-primary group-hover:-translate-y-2 group-hover:shadow-xl rounded-full flex items-center justify-center ${step.color} mb-4 transition-all duration-300`}>
                     <step.icon className="w-8 h-8" />
                   </div>
-                  <h3 className="font-bold text-text-primary text-sm">{step.label}</h3>
+                  <h3 className="font-bold text-text-primary text-sm group-hover:text-brand-primary transition-colors">{step.label}</h3>
                 </motion.div>
               ))}
             </div>

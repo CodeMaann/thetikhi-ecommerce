@@ -3,17 +3,48 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Star, Shield, Leaf, Truck, Home as HomeIcon, MapPin, Phone, Mail, MessageCircle, Check, Sun, Book, Heart, Play } from 'lucide-react';
-import { Product } from '../types';
+import { Product, BannerSetting } from '../types';
 import { safeFetch } from '../lib/api';
 
 export function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [banners, setBanners] = useState<{ [key: string]: BannerSetting }>({});
 
   useEffect(() => {
     safeFetch('/api/products')
       .then(data => setProducts(data))
       .catch(err => console.error('Error fetching products:', err));
+
+    const bannerKeys = [
+      'banner_hotdeal_1', 'banner_hotdeal_2', 'banner_hotdeal_3',
+      'banner_combo_offer', 'banner_imli_combo_1', 'banner_imli_combo_2'
+    ];
+    
+    Promise.all(
+      bannerKeys.map(key => 
+        safeFetch(`/api/settings/${key}`)
+          .then(data => {
+            if (data && data.value) {
+              try {
+                return { key, value: JSON.parse(data.value) as BannerSetting };
+              } catch (e) {
+                return null;
+              }
+            }
+            return null;
+          })
+          .catch(() => null)
+      )
+    ).then(results => {
+      const newBanners: { [key: string]: BannerSetting } = {};
+      results.forEach(res => {
+        if (res) {
+          newBanners[res.key] = res.value;
+        }
+      });
+      setBanners(newBanners);
+    });
   }, []);
 
   return (
@@ -110,15 +141,15 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="deal page buy 2 get 3.png"
+  src={banners.banner_hotdeal_1?.imageUrl || "deal page buy 2 get 3.png"}
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
               <div className="relative z-20 h-full flex flex-col justify-end p-6">
-                <h3 className="text-3xl font-bold text-white mb-1 leading-tight">Buy 2 Get 1 Free</h3>
-                <p className="text-gray-300 text-sm mb-4">On All 250g & 500g Jars</p>
-                <Link to="/shop" className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
-                  Grab Deal
+                <h3 className="text-3xl font-bold text-white mb-1 leading-tight">{banners.banner_hotdeal_1?.title || 'Buy 2 Get 1 Free'}</h3>
+                <p className="text-gray-300 text-sm mb-4">{banners.banner_hotdeal_1?.subtitle || 'On All 250g & 500g Jars'}</p>
+                <Link to={banners.banner_hotdeal_1?.buttonLink || "/shop"} className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
+                  {banners.banner_hotdeal_1?.buttonLabel || 'Grab Deal'}
                 </Link>
               </div>
             </div>
@@ -127,15 +158,15 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
               <img
-  src="deal card 2.png"
+  src={banners.banner_hotdeal_2?.imageUrl || "deal card 2.png"}
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
               <div className="relative z-20 h-full flex flex-col justify-end p-6">
-                <h3 className="text-3xl font-bold text-white mb-1 leading-tight">Buy 6 @ Just ₹1499</h3>
-                <p className="text-gray-300 text-sm mb-4">Massive Family Pack Savings</p>
-                <Link to="/shop" className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
-                  Grab Deal
+                <h3 className="text-3xl font-bold text-white mb-1 leading-tight">{banners.banner_hotdeal_2?.title || 'Buy 6 @ Just ₹1499'}</h3>
+                <p className="text-gray-300 text-sm mb-4">{banners.banner_hotdeal_2?.subtitle || 'Massive Family Pack Savings'}</p>
+                <Link to={banners.banner_hotdeal_2?.buttonLink || "/shop"} className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
+                  {banners.banner_hotdeal_2?.buttonLabel || 'Grab Deal'}
                 </Link>
               </div>
             </div>
@@ -144,15 +175,15 @@ export function Home() {
             <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
               <div className="absolute inset-0 bg-black/60 z-10" />
              <img
-  src="deal card 3.png"
+  src={banners.banner_hotdeal_3?.imageUrl || "deal card 3.png"}
   alt="Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
               <div className="relative z-20 h-full flex flex-col justify-end p-6">
-                <h3 className="text-3xl font-bold text-white mb-1 leading-tight">Free Delivery</h3>
-                <p className="text-gray-300 text-sm mb-4">On all orders above ₹999</p>
-                <Link to="/shop" className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
-                  Shop Now
+                <h3 className="text-3xl font-bold text-white mb-1 leading-tight">{banners.banner_hotdeal_3?.title || 'Free Delivery'}</h3>
+                <p className="text-gray-300 text-sm mb-4">{banners.banner_hotdeal_3?.subtitle || 'On all orders above ₹999'}</p>
+                <Link to={banners.banner_hotdeal_3?.buttonLink || "/shop"} className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
+                  {banners.banner_hotdeal_3?.buttonLabel || 'Shop Now'}
                 </Link>
               </div>
             </div>
@@ -168,8 +199,8 @@ export function Home() {
             <p className="text-text-muted">Crafted with love, spices, and tradition.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {products.slice(0, 2).map((product, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {products.slice(0, 3).map((product, i) => (
               <Link key={product.id} to={`/product/${product.id}`} className="block group bg-bg-elevated border border-border hover:border-brand-primary hover:-translate-y-1 hover:shadow-xl hover:shadow-brand-accent/5 rounded-2xl p-6 transition-all duration-300 flex flex-col">
                 <div className="relative h-64 mb-6 rounded-xl bg-bg-surface border border-border overflow-hidden group-hover:border-brand-accent/50 transition-colors">
                   <div className="absolute top-2 right-2 bg-brand-primary text-white text-xs font-bold px-3 py-1 rounded-full z-20">
@@ -208,7 +239,7 @@ export function Home() {
           <div className="relative rounded-2xl border border-dashed border-brand-primary overflow-hidden">
             <div className="absolute inset-0 bg-black/70 z-10" />
            <img
-  src="deal page buy 2 get 3.png"
+  src={banners.banner_combo_offer?.imageUrl || "deal page buy 2 get 3.png"}
   alt="Combo Offer"
   className="absolute inset-0 w-full h-full object-cover"
 />
@@ -216,13 +247,13 @@ export function Home() {
             <div className="relative z-20 grid md:grid-cols-2 gap-8 p-8 md:p-12 items-center">
               <div className="space-y-6">
                 <div className="text-brand-accent uppercase tracking-widest font-bold text-sm">Special Combo Offer</div>
-                <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight">Buy 2 Get 1 Free</h2>
+                <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight">{banners.banner_combo_offer?.title || 'Buy 2 Get 1 Free'}</h2>
                 <p className="text-gray-300 text-lg">
-                  Get 3 jars of our signature Aloo Ka Achar at the price of 2. Perfect for gifting or stocking up.
+                  {banners.banner_combo_offer?.subtitle || 'Get 3 jars of our signature Aloo Ka Achar at the price of 2. Perfect for gifting or stocking up.'}
                 </p>
-                <div className="text-4xl font-bold text-[#D4A017]">₹796 only</div>
-                <Link to="/shop" className="inline-block bg-gradient-to-r from-brand-primary to-brand-accent text-white px-8 py-4 rounded-xl font-bold hover:scale-105 transition-transform">
-                  Add Combo to Cart
+                {!banners.banner_combo_offer && <div className="text-4xl font-bold text-[#D4A017]">₹796 only</div>}
+                <Link to={banners.banner_combo_offer?.buttonLink || "/shop"} className="inline-block bg-gradient-to-r from-brand-primary to-brand-accent text-white px-8 py-4 rounded-xl font-bold hover:scale-105 transition-transform">
+                  {banners.banner_combo_offer?.buttonLabel || 'Add Combo to Cart'}
                 </Link>
               </div>
               <div className="hidden md:block">
@@ -233,6 +264,50 @@ export function Home() {
         </div>
       </section>
 
+      {/* ADDITIONAL IMLI COMBOS */}
+      {(banners.banner_imli_combo_1 || banners.banner_imli_combo_2) && (
+        <section className="pb-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 justify-center max-w-4xl mx-auto">
+              {banners.banner_imli_combo_1 && (
+                <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
+                  <div className="absolute inset-0 bg-black/60 z-10" />
+                  <img
+                    src={banners.banner_imli_combo_1.imageUrl || undefined}
+                    alt={banners.banner_imli_combo_1.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="relative z-20 h-full flex flex-col justify-end p-6">
+                    <h3 className="text-3xl font-bold text-white mb-1 leading-tight">{banners.banner_imli_combo_1.title}</h3>
+                    <p className="text-gray-300 text-sm mb-4">{banners.banner_imli_combo_1.subtitle}</p>
+                    <Link to={banners.banner_imli_combo_1.buttonLink || "/shop"} className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
+                      {banners.banner_imli_combo_1.buttonLabel || 'Shop Now'}
+                    </Link>
+                  </div>
+                </div>
+              )}
+              {banners.banner_imli_combo_2 && (
+                <div className="relative h-[280px] rounded-2xl overflow-hidden group hover:scale-[1.02] transition-transform">
+                  <div className="absolute inset-0 bg-black/60 z-10" />
+                  <img
+                    src={banners.banner_imli_combo_2.imageUrl || undefined}
+                    alt={banners.banner_imli_combo_2.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="relative z-20 h-full flex flex-col justify-end p-6">
+                    <h3 className="text-3xl font-bold text-white mb-1 leading-tight">{banners.banner_imli_combo_2.title}</h3>
+                    <p className="text-gray-300 text-sm mb-4">{banners.banner_imli_combo_2.subtitle}</p>
+                    <Link to={banners.banner_imli_combo_2.buttonLink || "/shop"} className="inline-flex justify-center bg-white text-black px-6 py-2.5 rounded-xl font-bold text-sm w-fit hover:bg-gray-200 transition-colors">
+                      {banners.banner_imli_combo_2.buttonLabel || 'Shop Now'}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 8. WHY CHOOSE US */}
       <section className="py-20 bg-bg-surface">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -242,17 +317,17 @@ export function Home() {
           
           <div className="grid md:grid-cols-2 gap-6">
             {[
-              { icon: Shield, color: "text-brand-primary", title: "FSSAI Approved", desc: "Every batch is prepared under strict hygiene standards. License: 133259988000037" },
-              { icon: Leaf, color: "text-[#4CAF50]", title: "100% Natural", desc: "No artificial preservatives, colors, or chemicals. Just pure homemade goodness." },
-              { icon: HomeIcon, color: "text-[#D4A017]", title: "Homemade Recipe", desc: "Made with the same love and care as your mother's kitchen. Small batch production." },
-              { icon: Truck, color: "text-brand-accent", title: "Pan India Delivery", desc: "Free shipping on orders above ₹999. Delivered in 3-5 business days." },
+              { icon: Shield, color: "text-brand-primary", bgColor: "bg-brand-primary/10", title: "FSSAI Approved", desc: "Every batch is prepared under strict hygiene standards. License: 133259988000037" },
+              { icon: Leaf, color: "text-[#4CAF50]", bgColor: "bg-[#4CAF50]/10", title: "100% Natural", desc: "No artificial preservatives, colors, or chemicals. Just pure homemade goodness." },
+              { icon: HomeIcon, color: "text-[#D4A017]", bgColor: "bg-[#D4A017]/10", title: "Homemade Recipe", desc: "Made with the same love and care as your mother's kitchen. Small batch production." },
+              { icon: Truck, color: "text-brand-accent", bgColor: "bg-brand-accent/10", title: "Pan India Delivery", desc: "Free shipping on orders above ₹999. Delivered in 3-5 business days." },
             ].map((item, i) => (
-              <div key={i} className="bg-bg-hover backdrop-blur-sm border border-border hover:border-brand-primary p-6 rounded-2xl flex gap-6 group hover:-translate-y-2 transition-all">
-                <div className={`${item.color} shrink-0`}>
-                  <item.icon className="w-10 h-10" />
+              <div key={i} className="bg-gradient-to-br from-bg-surface to-bg-hover backdrop-blur-sm border border-border hover:border-brand-primary p-6 rounded-2xl flex gap-6 group hover:-translate-y-3 hover:shadow-xl transition-all duration-300">
+                <div className={`${item.color} ${item.bgColor} shrink-0 w-16 h-16 flex items-center justify-center rounded-full`}>
+                  <item.icon className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-text-primary mb-2">{item.title}</h3>
+                  <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-brand-primary transition-colors">{item.title}</h3>
                   <p className="text-text-muted leading-relaxed">{item.desc}</p>
                 </div>
               </div>
@@ -292,11 +367,42 @@ export function Home() {
             <blockquote className="border-l-4 border-brand-primary pl-6 py-2 text-xl italic text-[#D4A017] font-serif">
               "Ghar jaisa achar, lekin sabke ghar tak."
             </blockquote>
-            
-            <div className="flex flex-col sm:flex-row gap-6 pt-4 border-t border-border mt-8">
-              <div className="flex items-center gap-3"><Check className="w-5 h-5 text-brand-primary" /> <span className="text-sm font-medium">Handpicked Potatoes</span></div>
-              <div className="flex items-center gap-3"><Sun className="w-5 h-5 text-brand-primary" /> <span className="text-sm font-medium">Sun-Dried Spices</span></div>
-              <div className="flex items-center gap-3"><Book className="w-5 h-5 text-brand-primary" /> <span className="text-sm font-medium">Traditional Recipe</span></div>
+          </div>
+        </div>
+      </section>
+
+      {/* 9.5. INGREDIENTS / BENEFITS SECTION */}
+      <section className="py-20 bg-bg-base border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-16 items-center">
+          <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-xl border border-border group">
+            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+            <img src="product image 1.png" alt="Pure Ingredients" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          </div>
+          <div className="space-y-8">
+            <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-text-primary">Pure Ingredients,<br/><span className="text-brand-primary">Authentic Taste</span></h2>
+            <p className="text-text-muted text-lg">Every jar is made using traditional methods and only the finest ingredients to ensure you get the true taste of home.</p>
+            <div className="flex flex-col gap-6 pt-4">
+              <div className="flex items-center gap-4 bg-bg-surface p-4 rounded-xl border border-border">
+                <div className="bg-brand-primary/10 p-3 rounded-full text-brand-primary shrink-0"><Check className="w-6 h-6" /></div>
+                <div>
+                  <h3 className="font-bold text-lg text-text-primary">Handpicked Potatoes</h3>
+                  <p className="text-sm text-text-muted">Sourced directly from trusted local farms.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 bg-bg-surface p-4 rounded-xl border border-border">
+                <div className="bg-brand-primary/10 p-3 rounded-full text-brand-primary shrink-0"><Sun className="w-6 h-6" /></div>
+                <div>
+                  <h3 className="font-bold text-lg text-text-primary">Sun-Dried Spices</h3>
+                  <p className="text-sm text-text-muted">Naturally dried to preserve essential oils and aroma.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 bg-bg-surface p-4 rounded-xl border border-border">
+                <div className="bg-brand-primary/10 p-3 rounded-full text-brand-primary shrink-0"><Book className="w-6 h-6" /></div>
+                <div>
+                  <h3 className="font-bold text-lg text-text-primary">Traditional Recipe</h3>
+                  <p className="text-sm text-text-muted">Prepared exactly as it has been for generations.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

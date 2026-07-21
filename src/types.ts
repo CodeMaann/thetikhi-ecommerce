@@ -1,3 +1,11 @@
+export interface BannerSetting {
+  imageUrl: string;
+  title: string;
+  subtitle: string;
+  buttonLabel: string;
+  buttonLink: string;
+}
+
 export interface Product {
   id: string;
   name: string;

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Package, Truck, CheckCircle2, Search, Eye, Filter, ArrowRightLeft, Edit, Trash2, Plus, Image as ImageIcon, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { ImageCropper } from '../components/ImageCropper';
 import { Order } from '../lib/orderService';
-import { Product, Coupon } from '../types';
+import { Product, Coupon, BannerSetting } from '../types';
 import { downloadInvoicePdf } from '../lib/pdfService';
 import { format } from 'date-fns';
 import { useStore } from '../store/useStore';
@@ -19,6 +19,16 @@ export function Admin() {
   const [metaPixelId, setMetaPixelId] = useState('');
   const [instagramUrl, setInstagramUrl] = useState('');
   const [instagramHandle, setInstagramHandle] = useState('');
+  
+  const initialBanner: BannerSetting = { imageUrl: '', title: '', subtitle: '', buttonLabel: '', buttonLink: '' };
+  const [banners, setBanners] = useState<{ [key: string]: BannerSetting }>({
+    banner_hotdeal_1: initialBanner,
+    banner_hotdeal_2: initialBanner,
+    banner_hotdeal_3: initialBanner,
+    banner_combo_offer: initialBanner,
+    banner_imli_combo_1: initialBanner,
+    banner_imli_combo_2: initialBanner
+  });
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -89,6 +99,29 @@ export function Admin() {
         const data = await resInstaHandle.json();
         setInstagramHandle(data.value || '');
       }
+
+      const bannerKeys = [
+        'banner_hotdeal_1', 'banner_hotdeal_2', 'banner_hotdeal_3',
+        'banner_combo_offer', 'banner_imli_combo_1', 'banner_imli_combo_2'
+      ];
+      
+      const newBanners: { [key: string]: BannerSetting } = { ...banners };
+      for (const key of bannerKeys) {
+        const resBanner = await fetch(`/api/admin/settings/${key}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (resBanner.ok) {
+          const data = await resBanner.json();
+          if (data.value) {
+            try {
+              newBanners[key] = JSON.parse(data.value);
+            } catch (e) {
+              console.error(`Error parsing banner ${key}`, e);
+            }
+          }
+        }
+      }
+      setBanners(newBanners);
     } catch (error) {
       console.error('Error loading settings:', error);
     }
@@ -755,6 +788,69 @@ export function Admin() {
                   >
                     Save Instagram
                   </button>
+                </div>
+              </div>
+
+              <div className="bg-bg-base p-4 rounded-xl border border-border">
+                <h3 className="text-lg font-bold mb-4">Promotional Banners</h3>
+                <div className="space-y-8">
+                  {[
+                    { key: 'banner_hotdeal_1', title: 'Hot Deal 1' },
+                    { key: 'banner_hotdeal_2', title: 'Hot Deal 2' },
+                    { key: 'banner_hotdeal_3', title: 'Hot Deal 3' },
+                    { key: 'banner_combo_offer', title: 'Combo Offer (Buy 2 Get 1)' },
+                    { key: 'banner_imli_combo_1', title: 'Imli Combo 1' },
+                    { key: 'banner_imli_combo_2', title: 'Imli Combo 2' }
+                  ].map(bannerDef => (
+                    <div key={bannerDef.key} className="border border-border p-4 rounded-lg bg-bg-elevated">
+                      <h4 className="font-bold mb-4">{bannerDef.title}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-text-primary mb-2">Image (URL or Upload)</label>
+                          <div className="flex gap-2">
+                             <input type="text" value={banners[bannerDef.key]?.imageUrl || ''} onChange={(e) => setBanners(prev => ({...prev, [bannerDef.key]: { ...(prev[bannerDef.key] || initialBanner), imageUrl: e.target.value }}))} className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" placeholder="Enter image URL" />
+                             <label className="bg-bg-hover hover:bg-border cursor-pointer px-4 py-2 rounded-lg text-sm flex items-center justify-center shrink-0 border border-border font-medium">
+                               Upload
+                               <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                 const file = e.target.files?.[0];
+                                 if (file) {
+                                   const reader = new FileReader();
+                                   reader.onloadend = () => {
+                                     setBanners(prev => ({...prev, [bannerDef.key]: { ...(prev[bannerDef.key] || initialBanner), imageUrl: reader.result as string }}));
+                                   };
+                                   reader.readAsDataURL(file);
+                                 }
+                               }} />
+                             </label>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-2">Title</label>
+                          <input type="text" value={banners[bannerDef.key]?.title || ''} onChange={(e) => setBanners(prev => ({...prev, [bannerDef.key]: { ...(prev[bannerDef.key] || initialBanner), title: e.target.value }}))} className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-2">Subtitle</label>
+                          <input type="text" value={banners[bannerDef.key]?.subtitle || ''} onChange={(e) => setBanners(prev => ({...prev, [bannerDef.key]: { ...(prev[bannerDef.key] || initialBanner), subtitle: e.target.value }}))} className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-2">Button Label</label>
+                          <input type="text" value={banners[bannerDef.key]?.buttonLabel || ''} onChange={(e) => setBanners(prev => ({...prev, [bannerDef.key]: { ...(prev[bannerDef.key] || initialBanner), buttonLabel: e.target.value }}))} className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-primary mb-2">Button Link</label>
+                          <input type="text" value={banners[bannerDef.key]?.buttonLink || ''} onChange={(e) => setBanners(prev => ({...prev, [bannerDef.key]: { ...(prev[bannerDef.key] || initialBanner), buttonLink: e.target.value }}))} className="w-full bg-bg-base border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" />
+                        </div>
+                      </div>
+                      <div className="flex justify-end mt-4">
+                        <button
+                          onClick={() => saveSetting(bannerDef.key, JSON.stringify(banners[bannerDef.key] || initialBanner))}
+                          className="px-6 py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded-lg font-bold transition-colors"
+                        >
+                          Save {bannerDef.title}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
