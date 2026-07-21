@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import { createServer as createViteServer } from 'vite';
-import prisma from './src/server/prisma';
+import prisma, { dbReady } from './src/server/prisma';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { sendOrderReceiptEmail, sendNewOrderAlertToOwner } from './src/server/email';
@@ -139,7 +139,13 @@ async function createOrderInDatabase(newOrderData: any) {
 async function startServer() {
   const app = express();
   const PORT = 3000;
-  
+
+  // Wait until we know whether the real database is reachable (or we've
+  // safely fallen back to the mock) before accepting any requests. This
+  // prevents the old bug where requests would hang forever mid-flight
+  // while a database connection silently stalled.
+  await dbReady;
+
 function processImages(images: string[]): string[] {
     if (!images || !Array.isArray(images)) return [];
     return images.map(img => {
@@ -157,6 +163,24 @@ function processImages(images: string[]): string[] {
  
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  // Lightweight health check — never touches the database, so it responds
+  // instantly regardless of database state. Prevents Hostinger's health
+  // checks from timing out and restarting the app in a crash loop.
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  // Safety-net timeout: if any request somehow takes longer than 10 seconds
+  // to resolve, respond with a clear error instead of hanging indefinitely.
+  app.use((req, res, next) => {
+    res.setTimeout(10000, () => {
+      if (!res.headersSent) {
+        res.status(503).json({ error: 'Request timed out. Please try again.' });
+      }
+    });
+    next();
+  });
   
   app.post('/api/auth/signup', async (req, res) => {
     try {
@@ -328,8 +352,13 @@ function processImages(images: string[]): string[] {
   });
 
   app.get('/api/products', async (req, res) => {
-    const activeProducts = await prisma.product.findMany({ where: { status: 'active' } });
-    res.json(activeProducts);
+    try {
+      const activeProducts = await prisma.product.findMany({ where: { status: 'active' } });
+      res.json(activeProducts);
+    } catch (err: any) {
+      console.error('Failed to fetch products:', err);
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
   });
 
   app.get('/api/products/:id', async (req, res) => {
@@ -346,34 +375,39 @@ function processImages(images: string[]): string[] {
   });
 
   app.post('/api/coupons/validate', async (req, res) => {
-    const { code, subtotal } = req.body;
-    if (!code || typeof subtotal !== 'number') {
-      return res.status(400).json({ valid: false, reason: 'Invalid request payload.' });
+    try {
+      const { code, subtotal } = req.body;
+      if (!code || typeof subtotal !== 'number') {
+        return res.status(400).json({ valid: false, reason: 'Invalid request payload.' });
+      }
+
+      // Case-insensitive match in Prisma can be tricky. Prisma Postgres `findFirst` with `mode: 'insensitive'` works.
+      const coupon = await prisma.coupon.findFirst({
+        where: { code: { equals: code, mode: 'insensitive' } }
+      });
+
+      if (!coupon) return res.json({ valid: false, reason: 'Coupon not found.' });
+      if (!coupon.active) return res.json({ valid: false, reason: 'Coupon is inactive.' });
+      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+        return res.json({ valid: false, reason: 'Coupon has expired.' });
+      }
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        return res.json({ valid: false, reason: 'Coupon usage limit exceeded.' });
+      }
+      if (coupon.minOrderValue && subtotal < coupon.minOrderValue) {
+        return res.json({ valid: false, reason: `Minimum order value of ₹${coupon.minOrderValue} required.` });
+      }
+      let discountAmount = 0;
+      if (coupon.type === 'percentage') {
+        discountAmount = Math.round((subtotal * coupon.value) / 100);
+      } else {
+        discountAmount = coupon.value;
+      }
+      res.json({ valid: true, discountAmount, code: coupon.code });
+    } catch (err) {
+      console.error('Coupon validation failed:', err);
+      res.status(500).json({ valid: false, reason: 'Server error' });
     }
-    
-    // Case-insensitive match in Prisma can be tricky. Prisma Postgres `findFirst` with `mode: 'insensitive'` works.
-    const coupon = await prisma.coupon.findFirst({
-      where: { code: { equals: code, mode: 'insensitive' } }
-    });
-    
-    if (!coupon) return res.json({ valid: false, reason: 'Coupon not found.' });
-    if (!coupon.active) return res.json({ valid: false, reason: 'Coupon is inactive.' });
-    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
-      return res.json({ valid: false, reason: 'Coupon has expired.' });
-    }
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-      return res.json({ valid: false, reason: 'Coupon usage limit exceeded.' });
-    }
-    if (coupon.minOrderValue && subtotal < coupon.minOrderValue) {
-      return res.json({ valid: false, reason: `Minimum order value of ₹${coupon.minOrderValue} required.` });
-    }
-    let discountAmount = 0;
-    if (coupon.type === 'percentage') {
-      discountAmount = Math.round((subtotal * coupon.value) / 100);
-    } else {
-      discountAmount = coupon.value;
-    }
-    res.json({ valid: true, discountAmount, code: coupon.code });
   });
 
   app.post('/api/orders', async (req, res) => {
@@ -559,28 +593,36 @@ app.get('/api/orders/:orderId', async (req, res) => {
 });
 
 app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
-    const allCoupons = await prisma.coupon.findMany();
-    res.json(allCoupons);
+    try {
+      const allCoupons = await prisma.coupon.findMany();
+      res.json(allCoupons);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   app.post('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
-    let { code, type, value, expiresAt, minOrderValue, usageLimit } = req.body;
-    if (!code) {
-      code = 'TIKHI' + Math.random().toString(36).substring(2, 7).toUpperCase();
-    }
-    const newCoupon = await prisma.coupon.create({
-      data: {
-        code: code.toUpperCase(),
-        type,
-        value: Number(value),
-        active: true,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        minOrderValue: minOrderValue ? Number(minOrderValue) : null,
-        usageLimit: usageLimit ? Number(usageLimit) : null,
-        usedCount: 0
+    try {
+      let { code, type, value, expiresAt, minOrderValue, usageLimit } = req.body;
+      if (!code) {
+        code = 'TIKHI' + Math.random().toString(36).substring(2, 7).toUpperCase();
       }
-    });
-    res.json(newCoupon);
+      const newCoupon = await prisma.coupon.create({
+        data: {
+          code: code.toUpperCase(),
+          type,
+          value: Number(value),
+          active: true,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          minOrderValue: minOrderValue ? Number(minOrderValue) : null,
+          usageLimit: usageLimit ? Number(usageLimit) : null,
+          usedCount: 0
+        }
+      });
+      res.json(newCoupon);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   app.put('/api/admin/coupons/:code', requireAuth, requireAdmin, async (req, res) => {
@@ -626,8 +668,12 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
   });
 
   app.get('/api/admin/products', requireAuth, requireAdmin, async (req, res) => {
-    const allProducts = await prisma.product.findMany();
-    res.json(allProducts);
+    try {
+      const allProducts = await prisma.product.findMany();
+      res.json(allProducts);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   app.post('/api/admin/products', requireAuth, requireAdmin, async (req, res) => {
@@ -947,8 +993,15 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
     });
   }
 
-  
-  
+  // Global error handler — catches anything unhandled above so a request
+  // never dies silently or hangs without a response.
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });

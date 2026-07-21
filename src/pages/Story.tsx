@@ -107,9 +107,8 @@ export function Story() {
             </div>
           </motion.div>
           <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
-            <div className="w-full aspect-square rounded-3xl overflow-hidden shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ring-4 ring-bg-surface hover:ring-brand-primary/50 relative group">
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-              <img src="/our story.png" alt="Bringing Back the Taste of Home" className="w-full h-full object-cover object-top" />
+<div className="w-full aspect-square rounded-3xl overflow-hidden shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ring-4 ring-bg-surface hover:ring-brand-primary/20">
+              <img src="/founder-photo.jpeg" alt="The Tikhi Founder" className="w-full h-full object-cover object-top" />
             </div>
           </motion.div>
         </div>
