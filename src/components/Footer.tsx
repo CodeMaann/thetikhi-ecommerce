@@ -1,0 +1,127 @@
+import { Placeholder } from "../components/Placeholder";
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Facebook, Instagram, Twitter, MapPin, Phone, Mail } from 'lucide-react';
+import { safeFetch } from '../lib/api';
+
+export function Footer() {
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
+
+  useEffect(() => {
+    safeFetch('/api/settings/instagram_url')
+      .then(data => {
+        if (data && data.value) setInstagramUrl(data.value);
+      })
+      .catch(() => {});
+      
+    safeFetch('/api/settings/instagram_handle')
+      .then(data => {
+        if (data && data.value) setInstagramHandle(data.value);
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <>
+      {instagramUrl && (
+        <section className="bg-bg-surface border-t border-border py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center space-y-4">
+            <h3 className="text-lg font-bold text-text-primary">Follow Us on Instagram</h3>
+            <a 
+              href={instagramUrl} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="inline-flex items-center space-x-2 text-brand-primary hover:text-[#A01830] transition-colors"
+            >
+              <Instagram className="w-6 h-6" />
+              <span className="font-bold text-lg">{instagramHandle || 'Instagram'}</span>
+            </a>
+          </div>
+        </section>
+      )}
+      <footer className="bg-bg-base border-t border-border pt-16 pb-8 text-text-muted">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+          {/* Brand */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+             <img
+  src="logoo.png"
+  alt="The Tikhi Logo"
+  className="h-20 w-auto"
+/>
+            </div>
+            <p className="text-sm">
+              It's All About Indian Spices. Bringing you the authentic "Maa Ke Haath Ka Swaad" right to your table.
+            </p>
+            <div className="flex space-x-4 pt-2">
+              <a href="#" className="hover:text-text-primary transition"><Facebook className="w-5 h-5" /></a>
+              <a href="https://www.instagram.com/thetikhi24" target="_blank" rel="noreferrer" className="hover:text-text-primary transition"><Instagram className="w-5 h-5" /></a>
+              <a href="#" className="hover:text-text-primary transition"><Twitter className="w-5 h-5" /></a>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h4 className="text-text-primary font-bold mb-4">Quick Links</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link to="/shop" className="hover:text-brand-accent transition">Shop Now</Link></li>
+              <li><Link to="/story" className="hover:text-brand-accent transition">Our Story</Link></li>
+              <li><Link to="/recipes" className="hover:text-brand-accent transition">Recipes</Link></li>
+              <li><Link to="/track-order" className="hover:text-brand-accent transition">Track Order</Link></li>
+              <li><Link to="/my-orders" className="hover:text-brand-accent transition">My Orders</Link></li>
+              <li><Link to="/contact" className="hover:text-brand-accent transition">Contact Us</Link></li>
+            </ul>
+          </div>
+
+          {/* Policies */}
+          <div>
+            <h4 className="text-text-primary font-bold mb-4">Policies</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link to="/privacy-policy" className="hover:text-brand-accent transition">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="hover:text-brand-accent transition">Terms of Service</Link></li>
+              <li><Link to="/refund-policy" className="hover:text-brand-accent transition">Refund Policy</Link></li>
+              <li><Link to="/shipping-policy" className="hover:text-brand-accent transition">Shipping Policy</Link></li>
+              <li><button onClick={() => window.dispatchEvent(new Event('open-cookie-preferences'))} className="hover:text-brand-accent transition text-left">Cookie Preferences</button></li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div className="space-y-4 text-sm">
+            <h4 className="text-text-primary font-bold mb-4">Contact Us</h4>
+            <div className="flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-brand-primary shrink-0" />
+              <span>D-14, 3rd Floor, Fateh Nagar, New Delhi-110018</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Phone className="w-5 h-5 text-brand-primary shrink-0" />
+              <span>+91 88267 06250 <br/> CC: +91 8178823391</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Mail className="w-5 h-5 text-brand-primary shrink-0" />
+              <span>support@thetikhi.com</span>
+            </div>
+            <div className="pt-2">
+               <span className="inline-block px-3 py-1 bg-bg-hover border border-border rounded-full text-xs font-mono text-[#D4A017]">
+                 FSSAI: 133259988000037
+               </span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between text-xs">
+          <p className="text-center md:text-left mb-4 md:mb-0">&copy; {new Date().getFullYear()} The Tikhi. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 md:mt-0">
+             <span>100% Natural</span>
+             <span className="hidden sm:inline">•</span>
+             <span>No Preservatives</span>
+             <span className="hidden sm:inline">•</span>
+             <span>Pan India Delivery</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+    </>
+  );
+}

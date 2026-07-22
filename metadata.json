@@ -1,0 +1,6 @@
+{
+  "name": "The Tikhi E-Commerce",
+  "description": "A feature-rich e-commerce platform for food and local products.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
