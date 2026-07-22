@@ -96,7 +96,7 @@ export function Home() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(196,30,58,0.2)_0%,transparent_70%)]" />
             <div className="relative">
               <img
-                src="hero.jpeg"
+                src="allukaacharimage1.jpg"
                 alt="Hero Product"
                 className="w-full max-w-full h-full min-h-[400px] object-contain rounded-2xl"
               />
@@ -376,8 +376,12 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-16 items-center">
           <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-xl border border-border group">
             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-            <img src="product image 1.png" alt="Pure Ingredients" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-          </div>
+  <img 
+    src="Authentic-taste.jpg" 
+    alt="Pure Ingredients" 
+    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" 
+  />
+</div>
           <div className="space-y-8">
             <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-text-primary">Pure Ingredients,<br/><span className="text-brand-primary">Authentic Taste</span></h2>
             <p className="text-text-muted text-lg">Every jar is made using traditional methods and only the finest ingredients to ensure you get the true taste of home.</p>
