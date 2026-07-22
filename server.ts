@@ -133,11 +133,13 @@ async function createOrderInDatabase(newOrderData: any) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  
+  // FIXED: Read PORT from environment variables supplied by the host platform
+  const PORT = process.env.PORT || 3000;
 
-  // Start listening instantly to satisfy Hostinger's 3-second check
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running immediately on http://localhost:${PORT}`);
+  // Bind to 0.0.0.0 and listen on the assigned PORT
+  app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Server running immediately on port ${PORT}`);
   });
 
   function processImages(images: string[]): string[] {
@@ -326,7 +328,6 @@ async function startServer() {
     }
   });
 
-  // FIXED: Fetch all products from database without strict status filters so they never disappear
   app.get('/api/products', async (req, res) => {
     try {
       const products = await prisma.product.findMany({
@@ -916,7 +917,6 @@ async function startServer() {
     }
   });
 
-  // FIXED: Fetch variants without strict status filters
   app.get('/api/products/:id/variants', async (req, res) => {
     try {
       const product = await prisma.product.findUnique({ where: { id: req.params.id } });
@@ -958,4 +958,6 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Fatal error starting server:', err);
+});
