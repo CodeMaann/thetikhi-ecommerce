@@ -35,18 +35,5 @@ export function Recipes() {
             </div>
           ))}
         </div>
-        
-        {/* Placeholder for recipe video */}
-        <div className="mt-20">
-           <h2 className="text-2xl font-bold text-text-primary text-center mb-8">Watch it in Action</h2>
-           <div className="w-full max-w-3xl mx-auto aspect-video bg-bg-surface rounded-3xl border border-border flex items-center justify-center overflow-hidden relative group cursor-pointer">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20" />
-              <div className="w-20 h-20 bg-brand-primary rounded-full flex items-center justify-center text-white pl-2 group-hover:scale-110 transition-transform">
-                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              </div>
-           </div>
-        </div>
-      </div>
-    </div>
   );
 }
