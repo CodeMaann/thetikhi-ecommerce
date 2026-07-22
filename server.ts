@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import { createServer as createViteServer } from 'vite';
-import prisma, { dbReady } from './src/server/prisma';
+import prisma from './src/server/prisma';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { sendOrderReceiptEmail, sendNewOrderAlertToOwner } from './src/server/email';
@@ -135,8 +135,10 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Wait until the real database is reachable before accepting requests
-  await dbReady;
+  // Start listening instantly to satisfy Hostinger's 3-second check
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running immediately on http://localhost:${PORT}`);
+  });
 
   function processImages(images: string[]): string[] {
     if (!images || !Array.isArray(images)) return [];
@@ -147,7 +149,7 @@ async function startServer() {
       if (!matches) throw new Error('Invalid base64 image data format.');
       const approxBytes = matches[2].length * 0.75;
       if (approxBytes > 4 * 1024 * 1024) {
-        throw new Error('One or more images exceed the 4MB size limit. Please choose a smaller image.');
+        throw new Error('One or more images exceed the 4MB size limit.');
       }
       return img;
     }).filter(Boolean);
@@ -160,7 +162,6 @@ async function startServer() {
     res.json({ status: 'ok' });
   });
 
-  // Updated timeout from 10s to 30s to comfortably handle Neon cold starts
   app.use((req, res, next) => {
     res.setTimeout(30000, () => {
       if (!res.headersSent) {
@@ -951,10 +952,6 @@ async function startServer() {
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' });
     }
-  });
-
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
