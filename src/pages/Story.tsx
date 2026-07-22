@@ -107,7 +107,7 @@ export function Story() {
             </div>
           </motion.div>
           <motion.div {...fadeInUp} transition={{ delay: 0.2 }}>
-<div className="w-full aspect-square rounded-3xl overflow-hidden shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ring-4 ring-bg-surface hover:ring-brand-primary/20">
+            <div className="w-full aspect-square rounded-3xl overflow-hidden shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 ring-4 ring-bg-surface hover:ring-brand-primary/20">
               <img src="/founder-photo.jpeg" alt="The Tikhi Founder" className="w-full h-full object-cover object-top" />
             </div>
           </motion.div>
@@ -232,7 +232,7 @@ export function Story() {
            <motion.div {...fadeInUp}>
              <h2 className="text-3xl md:text-4xl font-bold font-display text-text-primary mb-4">Loved by Families Across India</h2>
              <p className="text-lg text-text-secondary leading-relaxed">
-                From everyday meals to festive gatherings, The Tikhi has become a part of thousands of happy dining tables. Every smile, every review, and every repeat order motivates us to preserve the authentic taste of India.
+               From everyday meals to festive gatherings, The Tikhi has become a part of thousands of happy dining tables. Every smile, every review, and every repeat order motivates us to preserve the authentic taste of India.
              </p>
            </motion.div>
         </div>
@@ -245,14 +245,15 @@ export function Story() {
           <p className="text-text-muted">You can order The Tikhi from your favourite shopping platforms.</p>
         </motion.div>
         
-        <div className="flex flex-wrap justify-center gap-8 mb-12">
-           <motion.a href="https://www.amazon.in/storefront?me=A2JB03W2D1N5R2&ref_=ssf_share" target="_blank" rel="noopener noreferrer" {...fadeInUp} transition={{ delay: 0.1 }} className="w-40 block hover:scale-105 transition-transform">
-             <img src="amazon-banner.jpeg" alt="Buy on Amazon" className="w-full h-24 object-contain rounded-xl mb-3" />
-             <span className="text-sm font-medium text-text-primary">Amazon</span>
+        <div className="flex flex-wrap justify-center gap-8 md:gap-12 mb-12">
+           <motion.a href="https://www.amazon.in/storefront?me=A2JB03W2D1N5R2&ref_=ssf_share" target="_blank" rel="noopener noreferrer" {...fadeInUp} transition={{ delay: 0.1 }} className="w-48 md:w-56 block hover:scale-105 transition-transform">
+             <img src="amazon-banner.jpeg" alt="Buy on Amazon" className="w-full h-auto object-contain rounded-xl mb-4 shadow-sm" />
+             <span className="text-base font-medium text-text-primary">Amazon</span>
            </motion.a>
-           <motion.a href="https://www.flipkart.com/thetikhi-com-traditional-homemade-aaloo-ka-achar-green-chilli-pickle/p/itmd2e1518925d26?pid=PCKHMJZXZZTBF2U6" target="_blank" rel="noopener noreferrer" {...fadeInUp} transition={{ delay: 0.2 }} className="w-40 block hover:scale-105 transition-transform">
-             <img src="flipkart-banner.png" alt="Buy on Flipkart" className="w-full h-24 object-contain rounded-xl mb-3" />
-             <span className="text-sm font-medium text-text-primary">Flipkart</span>
+
+           <motion.a href="https://www.flipkart.com/thetikhi-com-traditional-homemade-aaloo-ka-achar-green-chilli-pickle/p/itmd2e1518925d26?pid=PCKHMJZXZZTBF2U6" target="_blank" rel="noopener noreferrer" {...fadeInUp} transition={{ delay: 0.2 }} className="w-48 md:w-56 block hover:scale-105 transition-transform">
+             <img src="flipkart-banner.png" alt="Buy on Flipkart" className="w-full h-auto object-contain rounded-xl mb-4 shadow-sm" />
+             <span className="text-base font-medium text-text-primary">Flipkart</span>
            </motion.a>
         </div>
         
