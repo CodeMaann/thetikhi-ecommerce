@@ -134,10 +134,9 @@ async function createOrderInDatabase(newOrderData: any) {
 async function startServer() {
   const app = express();
   
-  // FIXED: Read PORT from environment variables supplied by the host platform
+  // Safely read dynamic port from environment or fallback to 3000
   const PORT = process.env.PORT || 3000;
 
-  // Bind to 0.0.0.0 and listen on the assigned PORT
   app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running immediately on port ${PORT}`);
   });
