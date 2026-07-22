@@ -326,10 +326,13 @@ async function startServer() {
     }
   });
 
+  // FIXED: Fetch all products from database without strict status filters so they never disappear
   app.get('/api/products', async (req, res) => {
     try {
-      const activeProducts = await prisma.product.findMany({ where: { status: 'active' } });
-      res.json(activeProducts);
+      const products = await prisma.product.findMany({
+        orderBy: { weight: 'asc' }
+      });
+      res.json(products);
     } catch (err: any) {
       res.status(500).json({ error: 'Failed to fetch products' });
     }
@@ -913,6 +916,7 @@ async function startServer() {
     }
   });
 
+  // FIXED: Fetch variants without strict status filters
   app.get('/api/products/:id/variants', async (req, res) => {
     try {
       const product = await prisma.product.findUnique({ where: { id: req.params.id } });
@@ -920,8 +924,7 @@ async function startServer() {
       
       const variants = await prisma.product.findMany({
         where: { 
-          baseProductName: product.baseProductName,
-          status: 'active'
+          baseProductName: product.baseProductName
         },
         orderBy: { weight: 'asc' }
       });
