@@ -96,7 +96,7 @@ export function Home() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] bg-[radial-gradient(circle,rgba(196,30,58,0.2)_0%,transparent_70%)]" />
             <div className="relative">
               <img
-                src="hero.jpeg"
+                src="allukaacharimage1.jpg"
                 alt="Hero Product"
                 className="w-full max-w-full h-full min-h-[400px] object-contain rounded-2xl"
               />
