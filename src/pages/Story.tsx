@@ -246,18 +246,14 @@ export function Story() {
         </motion.div>
         
         <div className="flex flex-wrap justify-center gap-8 mb-12">
-           <motion.div {...fadeInUp} transition={{ delay: 0.1 }} className="w-32">
-             <Placeholder className="h-16 rounded-xl mb-3" />
+           <motion.a href="https://www.amazon.in/storefront?me=A2JB03W2D1N5R2&ref_=ssf_share" target="_blank" rel="noopener noreferrer" {...fadeInUp} transition={{ delay: 0.1 }} className="w-40 block hover:scale-105 transition-transform">
+             <img src="amazon-banner.jpeg" alt="Buy on Amazon" className="w-full h-24 object-contain rounded-xl mb-3" />
              <span className="text-sm font-medium text-text-primary">Amazon</span>
-           </motion.div>
-           <motion.div {...fadeInUp} transition={{ delay: 0.2 }} className="w-32">
-             <Placeholder className="h-16 rounded-xl mb-3" />
+           </motion.a>
+           <motion.a href="https://www.flipkart.com/thetikhi-com-traditional-homemade-aaloo-ka-achar-green-chilli-pickle/p/itmd2e1518925d26?pid=PCKHMJZXZZTBF2U6" target="_blank" rel="noopener noreferrer" {...fadeInUp} transition={{ delay: 0.2 }} className="w-40 block hover:scale-105 transition-transform">
+             <img src="flipkart-banner.png" alt="Buy on Flipkart" className="w-full h-24 object-contain rounded-xl mb-3" />
              <span className="text-sm font-medium text-text-primary">Flipkart</span>
-           </motion.div>
-           <motion.div {...fadeInUp} transition={{ delay: 0.3 }} className="w-32">
-             <Placeholder className="h-16 rounded-xl mb-3" />
-             <span className="text-sm font-medium text-text-primary">JioMart</span>
-           </motion.div>
+           </motion.a>
         </div>
         
         <motion.p {...fadeInUp} transition={{ delay: 0.4 }} className="text-text-secondary font-medium">
@@ -319,4 +315,3 @@ export function Story() {
     </div>
   );
 }
-
