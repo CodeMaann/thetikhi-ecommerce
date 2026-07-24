@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { Placeholder } from "./Placeholder";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product, key }: { product: Product, key?: React.Key }) {
   return (
     <div
       className="group relative bg-bg-surface rounded-3xl p-6 border border-border hover:border-brand-accent/50 transition-all flex flex-col h-full"

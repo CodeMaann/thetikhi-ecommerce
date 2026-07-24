@@ -19,9 +19,10 @@ import { TermsOfService } from './pages/TermsOfService';
 import { RefundPolicy } from './pages/RefundPolicy';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { ShippingPolicy } from './pages/ShippingPolicy';
-import { MessageCircle } from 'lucide-react';
 import { trackPageView } from './lib/analytics';
 import { CookieConsent } from './components/CookieConsent';
+import { PromoPopup } from './components/PromoPopup';
+import { FaWhatsapp } from 'react-icons/fa';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ThemeProvider } from './lib/useTheme';
 import { safeFetch } from './lib/api';
@@ -77,6 +78,19 @@ function PageTransition({ children }: { children: React.ReactNode }) {
     >
       {children}
     </motion.div>
+  );
+}
+
+function FloatingWhatsApp() {
+  return (
+    <a 
+      href="https://wa.me/918178823991?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." 
+      target="_blank" 
+      rel="noreferrer"
+      className="fixed bottom-6 right-6 w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50"
+    >
+      <FaWhatsapp size={32} />
+    </a>
   );
 }
 
@@ -150,6 +164,7 @@ export default function App() {
         <ScrollToTop />
         <Toaster position="top-center" />
         <CookieConsent />
+        <PromoPopup />
         <div className="flex flex-col min-h-screen bg-bg-base text-white text-text-primary font-sans selection:bg-brand-primary selection:text-white transition-colors duration-300">
           <Navbar />
           <main className="flex-grow">
@@ -157,15 +172,7 @@ export default function App() {
         </main>
         <Footer />
         
-        {/* Floating WhatsApp Button */}
-        <a 
-          href="https://wa.me/918178823991?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." 
-          target="_blank" 
-          rel="noreferrer"
-          className="fixed bottom-6 right-6 w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50"
-        >
-          <MessageCircle className="w-8 h-8" />
-        </a>
+        <FloatingWhatsApp />
       </div>
     </Router>
     </ThemeProvider>

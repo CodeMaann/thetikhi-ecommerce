@@ -20,6 +20,10 @@ export function Admin() {
   const [instagramUrl, setInstagramUrl] = useState('');
   const [instagramHandle, setInstagramHandle] = useState('');
   
+  const [promoPopup, setPromoPopup] = useState({
+    enabled: false, imageUrl: '', title: '', text: '', buttonText: '', buttonLink: ''
+  });
+  
   const initialBanner: BannerSetting = { imageUrl: '', title: '', subtitle: '', buttonLabel: '', buttonLink: '' };
   const [banners, setBanners] = useState<{ [key: string]: BannerSetting }>({
     banner_hotdeal_1: initialBanner,
@@ -100,6 +104,18 @@ export function Admin() {
         setInstagramHandle(data.value || '');
       }
 
+      const resPromo = await fetch('/api/admin/settings/promo_popup', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (resPromo.ok) {
+        const data = await resPromo.json();
+        if (data.value) {
+          try {
+            setPromoPopup(JSON.parse(data.value));
+          } catch (e) {}
+        }
+      }
+
       const bannerKeys = [
         'banner_hotdeal_1', 'banner_hotdeal_2', 'banner_hotdeal_3',
         'banner_combo_offer', 'banner_imli_combo_1', 'banner_imli_combo_2'
@@ -159,6 +175,14 @@ export function Admin() {
       await saveSetting('instagram_handle', instagramHandle);
     } catch (error) {
       toast.error('Failed to save instagram settings');
+    }
+  };
+
+  const savePromoPopup = async () => {
+    try {
+      await saveSetting('promo_popup', JSON.stringify(promoPopup));
+    } catch (error) {
+      toast.error('Failed to save promotional popup');
     }
   };
 
@@ -787,6 +811,74 @@ export function Admin() {
                     className="px-6 py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded-lg font-bold transition-colors"
                   >
                     Save Instagram
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-bg-base p-4 rounded-xl border border-border">
+                <h3 className="text-lg font-bold mb-4">Promotional Popup</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <input 
+                      type="checkbox" 
+                      id="promo-enabled"
+                      checked={promoPopup.enabled}
+                      onChange={(e) => setPromoPopup(prev => ({...prev, enabled: e.target.checked}))}
+                      className="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                    />
+                    <label htmlFor="promo-enabled" className="text-sm font-medium text-text-primary">
+                      Enable Promotional Popup
+                    </label>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">Image (URL or Upload)</label>
+                    <div className="flex gap-2">
+                       <input type="text" value={promoPopup.imageUrl} onChange={(e) => setPromoPopup(prev => ({...prev, imageUrl: e.target.value}))} className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" placeholder="Enter image URL" />
+                       <label className="bg-bg-hover hover:bg-border cursor-pointer px-4 py-2 rounded-lg text-sm flex items-center justify-center shrink-0 border border-border font-medium">
+                         Upload
+                         <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                           const file = e.target.files?.[0];
+                           if (file) {
+                             const reader = new FileReader();
+                             reader.onloadend = () => {
+                               setPromoPopup(prev => ({...prev, imageUrl: reader.result as string}));
+                             };
+                             reader.readAsDataURL(file);
+                           }
+                         }} />
+                       </label>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">Title</label>
+                    <input type="text" value={promoPopup.title} onChange={(e) => setPromoPopup(prev => ({...prev, title: e.target.value}))} className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" placeholder="e.g., Welcome to The Tikhi!" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-text-primary mb-2">Body Text</label>
+                    <textarea value={promoPopup.text} onChange={(e) => setPromoPopup(prev => ({...prev, text: e.target.value}))} className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" placeholder="e.g., Use code NEW20 for 20% off your first order." rows={3} />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-2">Button Text</label>
+                      <input type="text" value={promoPopup.buttonText} onChange={(e) => setPromoPopup(prev => ({...prev, buttonText: e.target.value}))} className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" placeholder="e.g., Shop Now" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-primary mb-2">Button Link</label>
+                      <input type="text" value={promoPopup.buttonLink} onChange={(e) => setPromoPopup(prev => ({...prev, buttonLink: e.target.value}))} className="w-full bg-bg-elevated border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:border-brand-primary" placeholder="e.g., /shop" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                  <button
+                    onClick={savePromoPopup}
+                    className="px-6 py-2 bg-brand-primary hover:bg-[#A01830] text-white rounded-lg font-bold transition-colors"
+                  >
+                    Save Popup
                   </button>
                 </div>
               </div>

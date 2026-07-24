@@ -1,6 +1,6 @@
 import { Placeholder } from "../components/Placeholder";
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Check, ChevronRight, Star, ShieldCheck, Clock, RefreshCcw, Leaf } from 'lucide-react';
 import { Product, Review } from '../types';
 import { useStore } from '../store/useStore';
@@ -9,6 +9,7 @@ import { ProductCard } from '../components/ProductCard';
 
 export function ProductDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<Product[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
@@ -79,6 +80,13 @@ export function ProductDetail() {
       addToCart(product, quantity);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
+    }
+  };
+
+  const handleBuyNow = () => {
+    if (product) {
+      addToCart(product, quantity);
+      navigate('/checkout');
     }
   };
 
@@ -256,9 +264,9 @@ export function ProductDetail() {
                       <><ShoppingBag className="w-5 h-5" /> Add to Cart</>
                     )}
                   </button>
-                  <Link to="/checkout" className="flex-1 py-4 bg-white hover:bg-gray-200 text-[#0A0A0A] rounded-xl font-bold transition-colors flex items-center justify-center">
+                  <button onClick={handleBuyNow} className="flex-1 py-4 bg-white hover:bg-gray-200 text-[#0A0A0A] rounded-xl font-bold transition-colors flex items-center justify-center">
                     Buy Now
-                  </Link>
+                  </button>
                 </div>
               </div>
 

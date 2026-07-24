@@ -43,33 +43,33 @@ export function CookieConsent() {
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6 pointer-events-none">
-      <div className="max-w-4xl mx-auto bg-bg-elevated border border-border rounded-2xl shadow-2xl p-6 pointer-events-auto">
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 pointer-events-none">
+      <div className="max-w-3xl mx-auto bg-bg-elevated border border-border rounded-xl shadow-2xl p-4 pointer-events-auto">
         
         {!showPreferences ? (
-          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-text-primary mb-2">We value your privacy</h3>
-              <p className="text-sm text-text-muted">
+              <h3 className="text-base font-bold text-text-primary mb-1">We value your privacy</h3>
+              <p className="text-xs text-text-muted">
                 We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 min-w-max">
+            <div className="flex flex-wrap gap-2 min-w-max">
               <button 
                 onClick={() => setShowPreferences(true)}
-                className="px-4 py-2 text-sm font-bold text-text-muted hover:text-text-primary transition-colors border border-transparent hover:border-border rounded-lg"
+                className="px-3 py-1.5 text-xs font-bold text-text-muted hover:text-text-primary transition-colors border border-transparent hover:border-border rounded-lg"
               >
                 Preferences
               </button>
               <button 
                 onClick={() => saveConsent(false)}
-                className="px-4 py-2 text-sm font-bold bg-bg-hover text-text-primary hover:bg-border rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-bold bg-bg-hover text-text-primary hover:bg-border rounded-lg transition-colors"
               >
                 Reject Non-Essential
               </button>
               <button 
                 onClick={() => saveConsent(true)}
-                className="px-4 py-2 text-sm font-bold bg-brand-primary hover:bg-[#A01830] text-white rounded-lg transition-colors"
+                className="px-3 py-1.5 text-xs font-bold bg-brand-primary hover:bg-[#A01830] text-white rounded-lg transition-colors"
               >
                 Accept All
               </button>

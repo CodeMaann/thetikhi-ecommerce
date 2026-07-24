@@ -56,11 +56,6 @@ let _razorpayInstance: Razorpay | null = null;
 function getRazorpayInstance(): Razorpay | null {
   if (_razorpayInstance) return _razorpayInstance;
   
-  console.log('[getRazorpayInstance] RAZORPAY_KEY_ID present:', !!process.env.RAZORPAY_KEY_ID);
-  console.log('[getRazorpayInstance] RAZORPAY_KEY_ID length:', process.env.RAZORPAY_KEY_ID?.length || 0);
-  console.log('[getRazorpayInstance] RAZORPAY_KEY_SECRET present:', !!process.env.RAZORPAY_KEY_SECRET);
-  console.log('[getRazorpayInstance] RAZORPAY_KEY_SECRET length:', process.env.RAZORPAY_KEY_SECRET?.length || 0);
-
   if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
     _razorpayInstance = new Razorpay({ 
       key_id: process.env.RAZORPAY_KEY_ID, 
@@ -138,18 +133,23 @@ async function createOrderInDatabase(newOrderData: any) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
   
-function processImages(images: string[]): string[] {
+  const PORT = 3000;
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running immediately on port ${PORT}`);
+  });
+
+  function processImages(images: string[]): string[] {
     if (!images || !Array.isArray(images)) return [];
     return images.map(img => {
       if (typeof img !== 'string') return '';
-      if (!img.startsWith('data:image/')) return img; // already a URL, keep as-is
+      if (!img.startsWith('data:image/')) return img;
       const matches = img.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
       if (!matches) throw new Error('Invalid base64 image data format.');
       const approxBytes = matches[2].length * 0.75;
       if (approxBytes > 4 * 1024 * 1024) {
-        throw new Error('One or more images exceed the 4MB size limit. Please choose a smaller image or let the crop tool compress it further.');
+        throw new Error('One or more images exceed the 4MB size limit.');
       }
       return img;
     }).filter(Boolean);
@@ -157,6 +157,19 @@ function processImages(images: string[]): string[] {
  
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+  app.get('/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  app.use((req, res, next) => {
+    res.setTimeout(30000, () => {
+      if (!res.headersSent) {
+        res.status(503).json({ error: 'Request timed out. Please try again.' });
+      }
+    });
+    next();
+  });
   
   app.post('/api/auth/signup', async (req, res) => {
     try {
@@ -237,35 +250,27 @@ function processImages(images: string[]): string[] {
       const genericMessage = 'If an account exists for that email, a reset code has been sent.';
 
       if (!user || user.role === 'admin') {
-        // Do not reveal that an admin account exists or if an account doesn't exist
         return res.json({ message: genericMessage });
       }
 
       const resendApiKey = process.env.RESEND_API_KEY;
       if (!resendApiKey) {
-        console.error('RESEND_API_KEY is not configured.');
         return res.status(500).json({ error: 'Email service is not configured' });
       }
 
       const resend = new Resend(resendApiKey);
       const senderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
 
-      // Invalidate old codes
       await prisma.passwordResetCode.updateMany({
         where: { userId: user.id, used: false },
         data: { used: true }
       });
 
-      // Generate a 6 digit code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
       await prisma.passwordResetCode.create({
-        data: {
-          userId: user.id,
-          code,
-          expiresAt
-        }
+        data: { userId: user.id, code, expiresAt }
       });
 
       await resend.emails.send({
@@ -277,7 +282,6 @@ function processImages(images: string[]): string[] {
 
       res.json({ message: genericMessage });
     } catch (err) {
-      console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -297,11 +301,7 @@ function processImages(images: string[]): string[] {
       }
 
       const resetCode = await prisma.passwordResetCode.findFirst({
-        where: {
-          userId: user.id,
-          code: code,
-          used: false
-        }
+        where: { userId: user.id, code: code, used: false }
       });
 
       if (!resetCode || new Date() > new Date(resetCode.expiresAt)) {
@@ -322,14 +322,19 @@ function processImages(images: string[]): string[] {
 
       res.json({ success: true, message: 'Password updated successfully' });
     } catch (err) {
-      console.error(err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
   app.get('/api/products', async (req, res) => {
-    const activeProducts = await prisma.product.findMany({ where: { status: 'active' } });
-    res.json(activeProducts);
+    try {
+      const products = await prisma.product.findMany({
+        orderBy: { weight: 'asc' }
+      });
+      res.json(products);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to fetch products' });
+    }
   });
 
   app.get('/api/products/:id', async (req, res) => {
@@ -346,34 +351,37 @@ function processImages(images: string[]): string[] {
   });
 
   app.post('/api/coupons/validate', async (req, res) => {
-    const { code, subtotal } = req.body;
-    if (!code || typeof subtotal !== 'number') {
-      return res.status(400).json({ valid: false, reason: 'Invalid request payload.' });
+    try {
+      const { code, subtotal } = req.body;
+      if (!code || typeof subtotal !== 'number') {
+        return res.status(400).json({ valid: false, reason: 'Invalid request payload.' });
+      }
+
+      const coupon = await prisma.coupon.findFirst({
+        where: { code: { equals: code, mode: 'insensitive' } }
+      });
+
+      if (!coupon) return res.json({ valid: false, reason: 'Coupon not found.' });
+      if (!coupon.active) return res.json({ valid: false, reason: 'Coupon is inactive.' });
+      if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+        return res.json({ valid: false, reason: 'Coupon has expired.' });
+      }
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        return res.json({ valid: false, reason: 'Coupon usage limit exceeded.' });
+      }
+      if (coupon.minOrderValue && subtotal < coupon.minOrderValue) {
+        return res.json({ valid: false, reason: `Minimum order value of ₹${coupon.minOrderValue} required.` });
+      }
+      let discountAmount = 0;
+      if (coupon.type === 'percentage') {
+        discountAmount = Math.round((subtotal * coupon.value) / 100);
+      } else {
+        discountAmount = coupon.value;
+      }
+      res.json({ valid: true, discountAmount, code: coupon.code });
+    } catch (err) {
+      res.status(500).json({ valid: false, reason: 'Server error' });
     }
-    
-    // Case-insensitive match in Prisma can be tricky. Prisma Postgres `findFirst` with `mode: 'insensitive'` works.
-    const coupon = await prisma.coupon.findFirst({
-      where: { code: { equals: code, mode: 'insensitive' } }
-    });
-    
-    if (!coupon) return res.json({ valid: false, reason: 'Coupon not found.' });
-    if (!coupon.active) return res.json({ valid: false, reason: 'Coupon is inactive.' });
-    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
-      return res.json({ valid: false, reason: 'Coupon has expired.' });
-    }
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-      return res.json({ valid: false, reason: 'Coupon usage limit exceeded.' });
-    }
-    if (coupon.minOrderValue && subtotal < coupon.minOrderValue) {
-      return res.json({ valid: false, reason: `Minimum order value of ₹${coupon.minOrderValue} required.` });
-    }
-    let discountAmount = 0;
-    if (coupon.type === 'percentage') {
-      discountAmount = Math.round((subtotal * coupon.value) / 100);
-    } else {
-      discountAmount = coupon.value;
-    }
-    res.json({ valid: true, discountAmount, code: coupon.code });
   });
 
   app.post('/api/orders', async (req, res) => {
@@ -382,7 +390,6 @@ function processImages(images: string[]): string[] {
       const savedOrder = await createOrderInDatabase(newOrderData);
       res.json({ success: true, order: savedOrder });
     } catch (err) {
-      console.error('Order creation failed:', err);
       res.status(500).json({ success: false, error: 'Failed to create order. Please try again.' });
     }
   });
@@ -400,7 +407,7 @@ function processImages(images: string[]): string[] {
       }
 
       const orderOptions = {
-        amount: Math.round(amount * 100), // convert to paise
+        amount: Math.round(amount * 100),
         currency: 'INR',
         receipt: 'rcpt_' + Math.random().toString(36).substring(2, 9)
       };
@@ -413,7 +420,6 @@ function processImages(images: string[]): string[] {
         keyId: process.env.RAZORPAY_KEY_ID
       });
     } catch (err) {
-      console.error('Failed to create Razorpay order:', err);
       res.status(500).json({ error: 'Failed to create payment order' });
     }
   });
@@ -436,7 +442,6 @@ function processImages(images: string[]): string[] {
         return res.status(400).json({ success: false, error: 'Payment verification failed.' });
       }
 
-      // Update payment info in orderData
       if (!orderData.payment) orderData.payment = {};
       orderData.payment.method = 'razorpay';
       orderData.payment.status = 'paid';
@@ -447,7 +452,6 @@ function processImages(images: string[]): string[] {
       const savedOrder = await createOrderInDatabase(orderData);
       res.json({ success: true, order: savedOrder });
     } catch (err) {
-      console.error('Razorpay verification failed:', err);
       res.status(500).json({ success: false, error: 'Failed to verify payment and create order.' });
     }
   });
@@ -510,77 +514,80 @@ function processImages(images: string[]): string[] {
 
       res.status(200).json({ success: true });
     } catch (error) {
-      console.error('Error processing Shiprocket webhook:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-// GET /api/orders/lookup
-app.get('/api/orders/lookup', async (req, res) => {
-  try {
-    const { phone } = req.query;
-    if (!phone || typeof phone !== 'string' || phone.trim().length < 5) {
-      return res.status(400).json({ error: 'Valid phone number is required' });
+  app.get('/api/orders/lookup', async (req, res) => {
+    try {
+      const { phone } = req.query;
+      if (!phone || typeof phone !== 'string' || phone.trim().length < 5) {
+        return res.status(400).json({ error: 'Valid phone number is required' });
+      }
+      
+      const orders = await prisma.order.findMany({
+        where: {
+          customer: {
+            path: ['phone'],
+            equals: phone.trim()
+          }
+        },
+        include: { items: true, statusHistory: true },
+        orderBy: { orderDate: 'desc' }
+      });
+      
+      res.json(orders);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to lookup orders' });
     }
-    
-    const orders = await prisma.order.findMany({
-      where: {
-        customer: {
-          path: ['phone'],
-          equals: phone.trim()
-        }
-      },
-      include: { items: true, statusHistory: true },
-      orderBy: { orderDate: 'desc' }
-    });
-    
-    res.json(orders);
-  } catch (err) {
-    console.error('Lookup failed:', err);
-    res.status(500).json({ error: 'Failed to lookup orders' });
-  }
-});
+  });
 
-// GET /api/orders/:orderId
-app.get('/api/orders/:orderId', async (req, res) => {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { orderId: req.params.orderId },
-      include: { items: true, statusHistory: true }
-    });
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+  app.get('/api/orders/:orderId', async (req, res) => {
+    try {
+      const order = await prisma.order.findUnique({
+        where: { orderId: req.params.orderId },
+        include: { items: true, statusHistory: true }
+      });
+      if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+      res.json(order);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to get order' });
     }
-    res.json(order);
-  } catch (err) {
-    console.error('Failed to get order:', err);
-    res.status(500).json({ error: 'Failed to get order' });
-  }
-});
+  });
 
-app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
-    const allCoupons = await prisma.coupon.findMany();
-    res.json(allCoupons);
+  app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const allCoupons = await prisma.coupon.findMany();
+      res.json(allCoupons);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   app.post('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
-    let { code, type, value, expiresAt, minOrderValue, usageLimit } = req.body;
-    if (!code) {
-      code = 'TIKHI' + Math.random().toString(36).substring(2, 7).toUpperCase();
-    }
-    const newCoupon = await prisma.coupon.create({
-      data: {
-        code: code.toUpperCase(),
-        type,
-        value: Number(value),
-        active: true,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        minOrderValue: minOrderValue ? Number(minOrderValue) : null,
-        usageLimit: usageLimit ? Number(usageLimit) : null,
-        usedCount: 0
+    try {
+      let { code, type, value, expiresAt, minOrderValue, usageLimit } = req.body;
+      if (!code) {
+        code = 'TIKHI' + Math.random().toString(36).substring(2, 7).toUpperCase();
       }
-    });
-    res.json(newCoupon);
+      const newCoupon = await prisma.coupon.create({
+        data: {
+          code: code.toUpperCase(),
+          type,
+          value: Number(value),
+          active: true,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          minOrderValue: minOrderValue ? Number(minOrderValue) : null,
+          usageLimit: usageLimit ? Number(usageLimit) : null,
+          usedCount: 0
+        }
+      });
+      res.json(newCoupon);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   app.put('/api/admin/coupons/:code', requireAuth, requireAdmin, async (req, res) => {
@@ -626,8 +633,12 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
   });
 
   app.get('/api/admin/products', requireAuth, requireAdmin, async (req, res) => {
-    const allProducts = await prisma.product.findMany();
-    res.json(allProducts);
+    try {
+      const allProducts = await prisma.product.findMany();
+      res.json(allProducts);
+    } catch (e) {
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 
   app.post('/api/admin/products', requireAuth, requireAdmin, async (req, res) => {
@@ -673,7 +684,6 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       });
       res.json(newProduct);
     } catch (e: any) {
-      console.error(e);
       res.status(500).json({ error: e.message });
     }
   });
@@ -721,7 +731,6 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       });
       res.json(updated);
     } catch (e: any) {
-      console.error('Error updating product:', e);
       if (e.code === 'P2025' || e.message === 'Product not found') {
         res.status(404).json({ error: 'Product not found.' });
       } else {
@@ -849,7 +858,6 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
     }
   });
 
-  // Reviews
   app.get('/api/products/:id/reviews', async (req, res) => {
     try {
       const reviews = await prisma.review.findMany({
@@ -859,12 +867,10 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       });
       res.json(reviews);
     } catch (error) {
-      console.error(error);
       res.status(500).json({ error: 'Failed to fetch reviews' });
     }
   });
 
-  
   app.get('/api/products/:id/can-review', requireAuth, async (req, res) => {
     try {
       const hasPurchased = await prisma.order.findFirst({
@@ -883,7 +889,6 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
     const { rating, comment } = req.body;
     const userId = (req as any).user.id;
     try {
-      // Check if user has purchased this product
       const hasPurchased = await prisma.order.findFirst({
         where: {
           customer: { path: ['email'], equals: (req as any).user.email },
@@ -906,12 +911,10 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       });
       res.json(review);
     } catch (error) {
-      console.error(error);
       res.status(500).json({ error: 'Failed to add review' });
     }
   });
 
-  // Get variants for a product
   app.get('/api/products/:id/variants', async (req, res) => {
     try {
       const product = await prisma.product.findUnique({ where: { id: req.params.id } });
@@ -919,14 +922,12 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
       
       const variants = await prisma.product.findMany({
         where: { 
-          baseProductName: product.baseProductName,
-          status: 'active'
+          baseProductName: product.baseProductName
         },
         orderBy: { weight: 'asc' }
       });
       res.json(variants);
     } catch (error) {
-      console.error(error);
       res.status(500).json({ error: 'Failed to fetch variants' });
     }
   });
@@ -940,18 +941,21 @@ app.get('/api/admin/coupons', requireAuth, requireAdmin, async (req, res) => {
     app.use(vite.middlewares);
   } else {
     app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
-    app.use(express.static(path.join(process.cwd(), 'public'))); // <-- ADD THIS NEW LINE HERE
+    app.use(express.static(path.join(process.cwd(), 'public')));
     app.use(express.static(path.join(process.cwd(), 'dist')));
     app.get('*', (req, res) => {
       res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
     });
   }
 
-  
-  
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Fatal error starting server:', err);
+});

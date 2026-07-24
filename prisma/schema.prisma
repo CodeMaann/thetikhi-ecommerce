@@ -3,7 +3,8 @@
 // changes, and run `npm run db:backup` first regardless.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
@@ -12,39 +13,39 @@ datasource db {
 }
 
 model Product {
-  reviews       Review[]
+  reviews         Review[]
   baseProductName String?
-  id            String  @id @default(uuid())
-  name          String
-  description   String
-  price         Float
-  originalPrice Float
-  discount      Float
-  weight        String
-  images        String[] @default([])
-  ingredients   String?
-  nutrition     String?
-  stock         Int     @default(0)
-  status        String  @default("active") // active or inactive
-  variantType   String  @default("single") // "single" or "combo"
-  comboItems    Json?
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  price           Float
+  originalPrice   Float
+  discount        Float
+  weight          String
+  images          String[] @default([])
+  ingredients     String?
+  nutrition       String?
+  stock           Int      @default(0)
+  status          String   @default("active") // active or inactive
+  variantType     String   @default("single") // "single" or "combo"
+  comboItems      Json?
 }
 
 model Order {
-  id                String             @id @default(uuid()) // internal id
-  orderId           String             @unique // TIKHI-00001
-  orderDate         String
-  customer          Json
-  pricing           Json
-  payment           Json
-  status            String
-  tracking          Json?
-  estimatedDelivery String
-  receiptUrl        String
-  shiprocketOrderId String?
+  id                   String             @id @default(uuid()) // internal id
+  orderId              String             @unique // TIKHI-00001
+  orderDate            String
+  customer             Json
+  pricing              Json
+  payment              Json
+  status               String
+  tracking             Json?
+  estimatedDelivery    String
+  receiptUrl           String
+  shiprocketOrderId    String?
   shiprocketShipmentId String?
-  items             OrderItem[]
-  statusHistory     OrderStatusEvent[]
+  items                OrderItem[]
+  statusHistory        OrderStatusEvent[]
 }
 
 model OrderItem {
@@ -83,12 +84,12 @@ model PasswordResetCode {
 model User {
   reviews            Review[]
   passwordResetCodes PasswordResetCode[]
-  id                 String   @id @default(uuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  role         String   @default("customer") // admin | customer
-  createdAt    DateTime @default(now())
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  name               String?
+  passwordHash       String
+  role               String              @default("customer") // admin | customer
+  createdAt          DateTime            @default(now())
 }
 
 model Coupon {
@@ -104,14 +105,14 @@ model Coupon {
 }
 
 model Review {
-  id          String   @id @default(uuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  rating      Int
-  comment     String
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now())
 }
 
 model SiteSetting {
