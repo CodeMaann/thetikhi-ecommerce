@@ -38,7 +38,7 @@ declare global {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  
+
   useEffect(() => {
     trackPageView(location.pathname + location.search);
   }, [location]);
@@ -83,9 +83,9 @@ function PageTransition({ children }: { children: React.ReactNode }) {
 
 function FloatingWhatsApp() {
   return (
-    <a 
-      href="https://wa.me/918178823991?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." 
-      target="_blank" 
+    <a
+      href="https://wa.me/919718156744?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products."
+      target="_blank"
       rel="noreferrer"
       className="fixed bottom-6 right-6 w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50"
     >
@@ -103,7 +103,7 @@ export default function App() {
         if (data.value) {
           // Note: When a cookie consent state is available, wrap this logic to require consent first.
           const value = data.value.trim();
-          
+
           if (/^\d+$/.test(value)) {
             // It's a raw numeric ID, inject standard fbq init
             (function(f: any, b: any, e: any, v: any, n?: any, t?: any, s?: any){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -171,7 +171,7 @@ export default function App() {
           <AnimatedRoutes />
         </main>
         <Footer />
-        
+
         <FloatingWhatsApp />
       </div>
     </Router>
