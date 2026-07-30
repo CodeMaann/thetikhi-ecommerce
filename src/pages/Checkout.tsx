@@ -23,7 +23,7 @@ export function Checkout() {
   const { cart, cartTotal, clearCart } = useStore();
   const navigate = useNavigate();
   const { Razorpay } = useRazorpay();
-  
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +32,10 @@ export function Checkout() {
   const [shipping, setShipping] = useState({
     name: '', phone: '', email: '', fullAddress: '', city: '', state: '', pincode: '', landmark: '', type: 'Home'
   });
-  
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay' | 'upi' | 'wallet'>('cod');
-  
+
+  // COD removed — Razorpay is now the only payment method.
+  const paymentMethod: 'razorpay' = 'razorpay';
+
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -50,10 +51,10 @@ export function Checkout() {
   }, [cart, navigate, successOrder]);
 
   const subtotal = cartTotal();
-  const shippingFee = subtotal > 999 ? 0 : 50;
-  const codCharges = paymentMethod === 'cod' && subtotal < 999 ? 50 : 0;
+  // Shipping charges removed — always free.
+  const shippingFee = 0;
   const discount = appliedCoupon ? appliedCoupon.discount : 0;
-  const grandTotal = subtotal + shippingFee + codCharges - discount;
+  const grandTotal = subtotal + shippingFee - discount;
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -116,257 +117,149 @@ export function Checkout() {
     }
   };
 
-  const placeOrderDirect = async (paymentStatus: Order['payment']['status'], rzpDetails?: any) => {
-    const baseOrder = {
-      orderDate: new Date().toISOString(),
-      customer: {
-        name: shipping.name,
-        phone: shipping.phone,
-        email: shipping.email,
-        address: {
-          fullAddress: shipping.fullAddress,
-          city: shipping.city,
-          state: shipping.state,
-          pincode: shipping.pincode,
-          landmark: shipping.landmark,
-          type: shipping.type
-        }
-      },
-      items: cart.map(i => ({
-        productId: i.id,
-        name: i.name,
-        quantity: i.quantity,
-        price: i.price,
-        mrp: i.price * 1.5,
-        image: i.image
-      })),
-      pricing: {
-        subtotal,
-        shipping: shippingFee,
-        codCharges,
-        discount: 0,
-        grandTotal
-      },
-      payment: {
-        method: paymentMethod,
-        status: paymentStatus,
-        razorpayOrderId: rzpDetails?.razorpay_order_id,
-        razorpayPaymentId: rzpDetails?.razorpay_payment_id,
-        paidAt: paymentStatus === 'paid' ? new Date().toISOString() : undefined
-      },
-      status: 'confirmed',
-      statusHistory: [{ status: 'confirmed', timestamp: new Date().toISOString(), note: 'Order placed successfully' }],
-      estimatedDelivery: format(addDays(new Date(), 4), 'yyyy-MM-dd')
-    };
-
-    try {
-      const payload = {
-        ...baseOrder,
-        couponCode: appliedCoupon?.code
-      };
-      
-      const res = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      
-      if (!data.success) {
-        setError(data.error || 'Failed to place order. Please try again.');
-        setLoading(false);
-        return;
-      }
-      if (data.success) {
-        const finalOrder = data.order;
-        // receiptUrl is now set on the server
-        clearCart();
-        
-        // Mock Email / WhatsApp
-        console.log(`Email Sent: Subject: "Order Confirmed — ${finalOrder.orderId} | The Tikhi"`);
-        console.log(`WhatsApp Sent to ${shipping.phone}: "Hi ${shipping.name}, your order *${finalOrder.orderId}* has been *confirmed*!"`);
-        
-        trackEvent('order_placed', { orderId: finalOrder.orderId, total: finalOrder.pricing.grandTotal, discount: finalOrder.pricing.discount, couponCode: finalOrder.pricing.offerApplied });
-        
-        setSuccessOrder(finalOrder);
-
-        // Fire confetti
-        const duration = 3 * 1000;
-        const animationEnd = Date.now() + duration;
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
-
-        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-        const interval: any = setInterval(function() {
-          const timeLeft = animationEnd - Date.now();
-
-          if (timeLeft <= 0) {
-            return clearInterval(interval);
-          }
-
-          const particleCount = 50 * (timeLeft / duration);
-          confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-          confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-        }, 250);
-      }
-    } catch (err) {
-      console.error('Failed to submit order:', err);
-    }
-  };
-
   const handlePlaceOrder = async () => {
     setLoading(true);
     setError(null);
-    
-    if (paymentMethod === 'cod') {
-      setTimeout(() => {
-        placeOrderDirect('pending');
-      }, 1000);
-      return;
-    }
 
-    if (paymentMethod === 'razorpay') {
-      try {
-        const createRes = await fetch('/api/payment/razorpay/create-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: grandTotal })
-        });
-        const orderData = await createRes.json();
+    try {
+      const createRes = await fetch('/api/payment/razorpay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: grandTotal })
+      });
+      const orderData = await createRes.json();
 
-        if (!createRes.ok || !orderData.orderId) {
-          setError(orderData.error || 'Failed to initialize payment.');
-          setLoading(false);
-          return;
-        }
-
-        const options: any = {
-          key: orderData.keyId,
-          amount: orderData.amount,
-          currency: orderData.currency,
-          name: 'The Tikhi',
-          description: 'Aloo Ka Achar Order',
-          image: '/logo.png',
-          order_id: orderData.orderId,
-          handler: async (res: any) => {
-            // Verify payment
-            try {
-              const baseOrder = {
-                orderDate: new Date().toISOString(),
-                customer: {
-                  name: shipping.name,
-                  phone: shipping.phone,
-                  email: shipping.email,
-                  address: {
-                    fullAddress: shipping.fullAddress,
-                    city: shipping.city,
-                    state: shipping.state,
-                    pincode: shipping.pincode,
-                    landmark: shipping.landmark,
-                    type: shipping.type
-                  }
-                },
-                items: cart.map(i => ({
-                  productId: i.id,
-                  name: i.name,
-                  quantity: i.quantity,
-                  price: i.price,
-                  mrp: i.price * 1.5,
-                  image: i.image
-                })),
-                pricing: {
-                  subtotal,
-                  shipping: shippingFee,
-                  codCharges,
-                  discount: 0,
-                  grandTotal
-                },
-                payment: {
-                  method: 'razorpay',
-                  status: 'paid',
-                  razorpayOrderId: res.razorpay_order_id,
-                  razorpayPaymentId: res.razorpay_payment_id,
-                  paidAt: new Date().toISOString()
-                },
-                status: 'confirmed',
-                statusHistory: [{ status: 'confirmed', timestamp: new Date().toISOString(), note: 'Order placed successfully' }],
-                estimatedDelivery: format(addDays(new Date(), 4), 'yyyy-MM-dd')
-              };
-              
-              const payload = {
-                ...baseOrder,
-                couponCode: appliedCoupon?.code
-              };
-
-              const verifyRes = await fetch('/api/payment/razorpay/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  razorpay_order_id: res.razorpay_order_id,
-                  razorpay_payment_id: res.razorpay_payment_id,
-                  razorpay_signature: res.razorpay_signature,
-                  orderData: payload
-                })
-              });
-              
-              const verifyData = await verifyRes.json();
-              if (verifyData.success) {
-                const finalOrder = verifyData.order;
-                clearCart();
-                
-                trackEvent('order_placed', { orderId: finalOrder.orderId, total: finalOrder.pricing.grandTotal, discount: finalOrder.pricing.discount, couponCode: finalOrder.pricing.offerApplied });
-                
-                setSuccessOrder(finalOrder);
-
-                // Fire confetti
-                const duration = 3 * 1000;
-                const animationEnd = Date.now() + duration;
-                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
-
-                const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-                const interval: any = setInterval(function() {
-                  const timeLeft = animationEnd - Date.now();
-
-                  if (timeLeft <= 0) {
-                    return clearInterval(interval);
-                  }
-
-                  const particleCount = 50 * (timeLeft / duration);
-                  confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-                  confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-                }, 250);
-              } else {
-                setError(verifyData.error || 'Payment verification failed.');
-              }
-            } catch (err) {
-              console.error('Verification error:', err);
-              setError('Payment verification failed.');
-            }
-          },
-          prefill: {
-            name: shipping.name,
-            email: shipping.email,
-            contact: shipping.phone,
-          },
-          theme: {
-            color: '#C41E3A',
-          },
-        };
-
-        const rzp = new Razorpay(options);
-        
-        rzp.on('payment.failed', function (response: any) {
-          setError(response.error?.description || "Payment failed. Please try again.");
-        });
-        
-        rzp.open();
+      if (!createRes.ok || !orderData.orderId) {
+        setError(orderData.error || 'Failed to initialize payment.');
         setLoading(false);
-      } catch (err) {
-        console.error('Failed to initialize Razorpay:', err);
-        setError('Failed to initialize payment gateway.');
-        setLoading(false);
+        return;
       }
+
+      const options: any = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'The Tikhi',
+        description: 'Aloo Ka Achar Order',
+        image: '/logo.png',
+        order_id: orderData.orderId,
+        handler: async (res: any) => {
+          // Verify payment
+          try {
+            const baseOrder = {
+              orderDate: new Date().toISOString(),
+              customer: {
+                name: shipping.name,
+                phone: shipping.phone,
+                email: shipping.email,
+                address: {
+                  fullAddress: shipping.fullAddress,
+                  city: shipping.city,
+                  state: shipping.state,
+                  pincode: shipping.pincode,
+                  landmark: shipping.landmark,
+                  type: shipping.type
+                }
+              },
+              items: cart.map(i => ({
+                productId: i.id,
+                name: i.name,
+                quantity: i.quantity,
+                price: i.price,
+                mrp: i.price * 1.5,
+                image: i.image
+              })),
+              pricing: {
+                subtotal,
+                shipping: shippingFee,
+                discount: 0,
+                grandTotal
+              },
+              payment: {
+                method: 'razorpay',
+                status: 'paid',
+                razorpayOrderId: res.razorpay_order_id,
+                razorpayPaymentId: res.razorpay_payment_id,
+                paidAt: new Date().toISOString()
+              },
+              status: 'confirmed',
+              statusHistory: [{ status: 'confirmed', timestamp: new Date().toISOString(), note: 'Order placed successfully' }],
+              estimatedDelivery: format(addDays(new Date(), 4), 'yyyy-MM-dd')
+            };
+
+            const payload = {
+              ...baseOrder,
+              couponCode: appliedCoupon?.code
+            };
+
+            const verifyRes = await fetch('/api/payment/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: res.razorpay_order_id,
+                razorpay_payment_id: res.razorpay_payment_id,
+                razorpay_signature: res.razorpay_signature,
+                orderData: payload
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              const finalOrder = verifyData.order;
+              clearCart();
+
+              trackEvent('order_placed', { orderId: finalOrder.orderId, total: finalOrder.pricing.grandTotal, discount: finalOrder.pricing.discount, couponCode: finalOrder.pricing.offerApplied });
+
+              setSuccessOrder(finalOrder);
+
+              // Fire confetti
+              const duration = 3 * 1000;
+              const animationEnd = Date.now() + duration;
+              const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+              const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+              const interval: any = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                  return clearInterval(interval);
+                }
+
+                const particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+              }, 250);
+            } else {
+              setError(verifyData.error || 'Payment verification failed.');
+            }
+          } catch (err) {
+            console.error('Verification error:', err);
+            setError('Payment verification failed.');
+          }
+        },
+        prefill: {
+          name: shipping.name,
+          email: shipping.email,
+          contact: shipping.phone,
+        },
+        theme: {
+          color: '#C41E3A',
+        },
+      };
+
+      const rzp = new Razorpay(options);
+
+      rzp.on('payment.failed', function (response: any) {
+        setError(response.error?.description || "Payment failed. Please try again.");
+      });
+
+      rzp.open();
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to initialize Razorpay:', err);
+      setError('Failed to initialize payment gateway.');
+      setLoading(false);
     }
   };
 
@@ -382,7 +275,7 @@ export function Checkout() {
             </button>
 
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-accent to-brand-primary" />
-            
+
             <div className="flex justify-center mb-6 mt-4">
               <div className="w-20 h-20 bg-[#4CAF50]/10 rounded-full flex items-center justify-center animate-bounce-slow">
                 <CheckCircle2 className="w-12 h-12 text-[#4CAF50]" />
@@ -433,12 +326,12 @@ export function Checkout() {
                   <Download className="w-4 h-4" /> Receipt
                 </button>
               </div>
-              
+
               <button onClick={() => navigate('/shop')} className="w-full py-3 px-4 border border-border hover:bg-bg-hover text-text-primary rounded-xl font-bold transition-colors text-sm">
                 Continue Shopping
               </button>
 
-              <a href={`https://wa.me/918178823991?text=Hi, I placed order ${successOrder.orderId}.`} target="_blank" rel="noopener noreferrer" className="w-full py-3 px-4 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-[#25D366]/20 mt-4">
+              <a href={`https://wa.me/919718156744?text=Hi, I placed order ${successOrder.orderId}.`} target="_blank" rel="noopener noreferrer" className="w-full py-3 px-4 bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] rounded-xl font-bold transition-colors flex items-center justify-center gap-2 text-sm border border-[#25D366]/20 mt-4">
                 <MessageCircle className="w-5 h-5" /> Get updates on WhatsApp
               </a>
             </div>
@@ -447,7 +340,7 @@ export function Checkout() {
       )}
 
       <div className="max-w-6xl mx-auto px-4 lg:px-8">
-        
+
         {/* Progress Bar */}
         <div className="flex items-center justify-center mb-8">
           <div className={`flex items-center ${step >= 1 ? 'text-brand-primary' : 'text-gray-500'}`}>
@@ -474,7 +367,7 @@ export function Checkout() {
             {step === 1 && (
               <form onSubmit={handleShippingSubmit} className="bg-bg-elevated border border-border rounded-2xl p-6 space-y-4">
                 <h2 className="text-xl font-bold mb-4 border-b border-border pb-4">Shipping Details</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-text-muted mb-1">Full Name *</label>
@@ -553,23 +446,12 @@ export function Checkout() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className={`block p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-brand-primary bg-brand-primary/5 shadow-[0_0_15px_rgba(196,30,58,0.2)]' : 'border-border hover:border-gray-500'}`}>
+                  <div className="block p-4 border rounded-xl border-brand-primary bg-brand-primary/5 shadow-[0_0_15px_rgba(196,30,58,0.2)]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <input type="radio" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="mr-4 w-5 h-5 accent-[#C41E3A]" />
-                        <div>
-                          <p className="font-bold">CASH ON DELIVERY (COD)</p>
-                          <p className="text-sm text-text-muted">Pay ₹50 extra COD charges if order below ₹999</p>
+                        <div className="mr-4 w-5 h-5 rounded-full bg-brand-primary flex items-center justify-center">
+                          <div className="w-2 h-2 rounded-full bg-white" />
                         </div>
-                      </div>
-                      <span className="bg-gray-800 text-xs px-2 py-1 rounded text-white">No prepayment needed</span>
-                    </div>
-                  </label>
-
-                  <label className={`block p-4 border rounded-xl cursor-pointer transition-colors ${paymentMethod === 'razorpay' ? 'border-brand-primary bg-brand-primary/5 shadow-[0_0_15px_rgba(196,30,58,0.2)]' : 'border-border hover:border-gray-500'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <input type="radio" checked={paymentMethod === 'razorpay'} onChange={() => setPaymentMethod('razorpay')} className="mr-4 w-5 h-5 accent-[#C41E3A]" />
                         <div>
                           <p className="font-bold">RAZORPAY — Online Payment</p>
                           <p className="text-sm text-text-muted">Powered by Razorpay. 100% secure SSL encryption.</p>
@@ -582,7 +464,7 @@ export function Checkout() {
                       </div>
                       <span className="bg-[#4CAF50]/20 text-[#4CAF50] text-xs px-2 py-1 rounded">Secure & Instant</span>
                     </div>
-                  </label>
+                  </div>
                 </div>
 
                 <div className="pt-6 flex gap-4">
@@ -602,7 +484,7 @@ export function Checkout() {
                   <h2 className="text-xl font-bold">Review Order</h2>
                   <button onClick={() => setStep(2)} className="text-sm text-text-muted hover:text-text-primary">Edit Payment</button>
                 </div>
-                
+
                 <div className="bg-bg-base p-4 rounded-xl border border-border mb-4">
                   <p className="text-text-muted text-sm mb-1">Delivering to:</p>
                   <p className="font-medium">{shipping.name} — {shipping.phone}</p>
@@ -630,7 +512,7 @@ export function Checkout() {
           <div className="lg:w-[400px]">
             <div className="bg-bg-elevated p-6 rounded-2xl border border-border sticky top-24">
               <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-              
+
               <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 mb-6 scrollbar-thin">
                 {cart.map((item, index) => (
                   <div key={item.id || `cart-item-${index}`} className="flex gap-4 bg-bg-base p-2 rounded-xl border border-border">
@@ -653,14 +535,14 @@ export function Checkout() {
               <div className="mb-6 pt-4 border-t border-border">
                 <p className="text-sm font-bold text-text-muted mb-2">Have a coupon?</p>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Enter code" 
+                  <input
+                    type="text"
+                    placeholder="Enter code"
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                     className="flex-1 bg-bg-base border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary uppercase"
                   />
-                  <button 
+                  <button
                     onClick={handleApplyCoupon}
                     disabled={!couponInput.trim()}
                     className="px-4 py-2 bg-white/10 hover:bg-white/20 text-text-primary rounded-lg font-bold text-sm transition-colors disabled:opacity-50"
@@ -685,15 +567,9 @@ export function Checkout() {
                 )}
                 <div className="flex justify-between text-text-muted">
                   <span>Shipping</span>
-                  <span>{shippingFee === 0 ? <span className="text-[#4CAF50]">FREE</span> : `₹${shippingFee}`}</span>
+                  <span className="text-[#4CAF50]">FREE</span>
                 </div>
-                {paymentMethod === 'cod' && (
-                  <div className="flex justify-between text-brand-primary">
-                    <span>COD Charges</span>
-                    <span>₹{codCharges}</span>
-                  </div>
-                )}
-                
+
                 <div className="flex justify-between items-center text-xl font-bold pt-4 border-t border-border mt-2">
                   <span>Grand Total</span>
                   <span className="text-[#D4A017]">₹{grandTotal}</span>
