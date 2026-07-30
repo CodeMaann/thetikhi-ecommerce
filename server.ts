@@ -174,7 +174,7 @@ function processImages(images: string[]): string[] {
   // Safety-net timeout: if any request somehow takes longer than 10 seconds
   // to resolve, respond with a clear error instead of hanging indefinitely.
   app.use((req, res, next) => {
-    res.setTimeout(10000, () => {
+    res.setTimeout(60000, () => {
       if (!res.headersSent) {
         res.status(503).json({ error: 'Request timed out. Please try again.' });
       }
@@ -354,10 +354,14 @@ function processImages(images: string[]): string[] {
   app.get('/api/products', async (req, res) => {
     try {
       const activeProducts = await prisma.product.findMany({ where: { status: 'active' } });
-      res.json(activeProducts);
+      if (!res.headersSent) {
+        res.json(activeProducts);
+      }
     } catch (err: any) {
       console.error('Failed to fetch products:', err);
-      res.status(500).json({ error: 'Failed to fetch products' });
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to fetch products' });
+      }
     }
   });
 
