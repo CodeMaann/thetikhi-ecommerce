@@ -22,7 +22,10 @@ const STATES = [
 export function Checkout() {
   const { cart, cartTotal, clearCart } = useStore();
   const navigate = useNavigate();
-  const { Razorpay } = useRazorpay();
+  
+  // Safely extract Razorpay depending on the react-razorpay version (handles both v2 and v3)
+  const razorpayData: any = useRazorpay();
+  const RazorpaySDK = Array.isArray(razorpayData) ? razorpayData[0] : razorpayData?.Razorpay;
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -121,6 +124,15 @@ export function Checkout() {
     setLoading(true);
     setError(null);
 
+    // Bulletproof check to ensure Razorpay is loaded before calling new Razorpay()
+    const RazorpayConstructor = RazorpaySDK || (window as any).Razorpay;
+
+    if (!RazorpayConstructor) {
+      setError("Payment gateway is initializing. Please wait a second and try again.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const createRes = await fetch('/api/payment/razorpay/create-order', {
         method: 'POST',
@@ -172,7 +184,7 @@ export function Checkout() {
               pricing: {
                 subtotal,
                 shipping: shippingFee,
-                discount: 0,
+                discount: discount,
                 grandTotal
               },
               payment: {
@@ -248,7 +260,7 @@ export function Checkout() {
         },
       };
 
-      const rzp = new Razorpay(options);
+      const rzp = new RazorpayConstructor(options);
 
       rzp.on('payment.failed', function (response: any) {
         setError(response.error?.description || "Payment failed. Please try again.");
