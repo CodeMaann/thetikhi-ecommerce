@@ -40,7 +40,7 @@ export function Contact() {
                 </div>
                 <div>
                   <h3 className="text-text-primary font-bold mb-1">Call Us</h3>
-                  <p className="text-text-muted text-sm">+91 88267 06250<br/>CC: +91 8178823391</p>
+                  <p className="text-text-muted text-sm">+91 88267 06250<br/>CC: +91 9718156744</p>
                 </div>
               </div>
 
@@ -60,7 +60,7 @@ export function Contact() {
                  <h4 className="text-text-primary font-bold">Chat with us</h4>
                  <p className="text-[#25D366] text-sm">We're on WhatsApp!</p>
                </div>
-               <a href="https://wa.me/918178823991?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." target="_blank" rel="noreferrer" className="px-6 py-2 bg-[#25D366] text-black font-bold rounded-full hover:scale-105 transition-transform inline-block">
+               <a href="https://wa.me/919718156744?text=Hi%2C%20I%20have%20a%20question%20about%20The%20Tikhi%20products." target="_blank" rel="noreferrer" className="px-6 py-2 bg-[#25D366] text-black font-bold rounded-full hover:scale-105 transition-transform inline-block">
                  Connect
                </a>
             </div>
